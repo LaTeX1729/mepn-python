@@ -37,6 +37,7 @@ results on glibc 2.37 and later.
 """
 
 import os
+import re
 import sys
 from math import gcd, isqrt
 
@@ -50,6 +51,9 @@ MAX_BASE = 36
 # ---------------------------------------------------------------------------
 # Family helpers (pure functions on the family data structure)
 # ---------------------------------------------------------------------------
+
+_DIGCH = [DIGITS[d] if d < len(DIGITS) else "" for d in range(256)]
+
 
 def digitchar(d):
     return "" if d == EMPTY else DIGITS[d]
@@ -115,13 +119,10 @@ def instancestring(f, picks=()):
     order given. This one function covers the C functions
     empty/instance/double/triple/quad/quintinstancestring.
     """
-    out = []
-    for i, (d, _) in enumerate(f):
-        out.append(digitchar(d))
-        for x, y in picks:
-            if x == i:
-                out.append(digitchar(f[x][1][y]))
-    return "".join(out)
+    parts = [_DIGCH[d] for d, _ in f]
+    for x, y in picks:
+        parts[x] += DIGITS[f[x][1][y]]
+    return "".join(parts)
 
 
 def startinstancestring(f, length):
@@ -191,10 +192,48 @@ class BrightMinimal:
         return is_probable_prime(self.val(s))
 
     # -- kernel -------------------------------------------------------------
+    # The subword test dominates the running time, so the kernel is compiled
+    # into regular expressions that run in C. q = "a1a2...ak" becomes
+    # "[^a1]*a1[^a2]*a2...[^ak]*ak", which matches at the start of p exactly
+    # when q is a subsequence of p (with no backtracking). The kernel only
+    # grows, so it is compiled in frozen blocks of _CHUNK primes plus a small
+    # tail that is recompiled when new primes arrive.
+    _CHUNK = 64
+
+    @staticmethod
+    def _compile(primes):
+        alts = ["".join("[^%s]*%s" % (re.escape(c), re.escape(c)) for c in q) for q in primes]
+        return re.compile("(?:" + "|".join(alts) + ")").match
+
+    def _sync_index(self):
+        K = self.K
+        if getattr(self, "_indexed_list", None) is not K:
+            self._indexed_list = K
+            self._frozen = []
+            self._frozen_len = 0
+            self._tail = None
+            self._tail_len = 0
+        n = len(K)
+        while n - self._frozen_len >= self._CHUNK:
+            self._frozen.append(self._compile(K[self._frozen_len:self._frozen_len + self._CHUNK]))
+            self._frozen_len += self._CHUNK
+            self._tail = None
+            self._tail_len = 0
+        if n > self._frozen_len and self._tail_len != n:
+            self._tail = self._compile(K[self._frozen_len:n])
+            self._tail_len = n
+        elif n == self._frozen_len:
+            self._tail = None
+            self._tail_len = n
+
     def nosubword(self, p):
-        for q in self.K:
-            if is_subsequence(q, p):
+        """True if no kernel prime is a subsequence of p."""
+        self._sync_index()
+        for match in self._frozen:
+            if match(p):
                 return False
+        if self._tail is not None and self._tail(p):
+            return False
         return True
 
     def nosubwordskip(self, p, skip):
@@ -214,8 +253,18 @@ class BrightMinimal:
         L = len(p)
         nr = [len(r) for _, r in p]
 
+        nodes = [_DIGCH[d] for d, _ in p]
+        reps = [[DIGITS[x] for x in r] for _, r in p]
+        join = "".join
+        B_ = self.base
+
         def inst(*picks):
-            return val(instancestring(p, picks))
+            # Same string as instancestring(p, picks), built more cheaply.
+            parts = nodes[:]
+            for x, y in picks:
+                parts[x] += reps[x][y]
+            s = join(parts)
+            return int(s, B_) if s else 0
 
         empty = inst()
         g = empty

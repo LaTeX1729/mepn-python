@@ -1,0 +1,22 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "bright-algorithm"
+version = "0.1.0"
+description = "The Bright Algorithm: a Python translation of Curtis Bright's mepn (minimal elements for the prime numbers)"
+readme = "README.md"
+requires-python = ">=3.8"
+dependencies = []
+
+[project.optional-dependencies]
+# gmpy2 wraps GMP, the same library the original C code uses. It speeds up
+# primality testing, which matters most in higher bases with long primes.
+fast = ["gmpy2>=2.1"]
+
+[project.scripts]
+bright-minimal = "bright.minimal:main"
+
+[tool.setuptools]
+packages = ["bright"]

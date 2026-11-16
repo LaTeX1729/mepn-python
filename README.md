@@ -23,7 +23,19 @@ The LLR executable is available at http://jpenne.free.fr/index2.html.
 
 ## Usage
 
-Requires Python 3.8+. No packages are needed. If [`gmpy2`](https://pypi.org/project/gmpy2/) is installed, it is used for faster primality testing.
+Requires Python 3.8+. It runs with no extra packages, but installing **gmpy2** is recommended for speed:
+
+```sh
+pip install gmpy2            # or: pip install -r requirements.txt
+```
+
+gmpy2 is a standalone library, not part of a larger package. It wraps GMP, the same arithmetic library the original C code uses, and ships ready-made for Windows, macOS and Linux. With it installed, primality testing uses GMP's own `mpz_probab_prime_p`, exactly as in the C version. To check which is in use:
+
+```sh
+python -c "import bright.primality as p; print(p.BACKEND)"   # gmpy2 or pure-python
+```
+
+Run it as follows:
 
 ```sh
 python -m bright.minimal 2 10         # bases 2 to 10
@@ -51,6 +63,19 @@ The original `minimal.c` was compiled and run next to the Python version. For ev
 Identical iteration files mean the Python takes the same path through the search as the C, not just the same final answer.
 
 Against `data-minimal-sets/`, the Python output never contains a prime that isn't in the reference set. Every reference prime it doesn't output lies in one of the reported unsolved families; in the C pipeline those are found later by `simple`/`search`.
+
+### Speed
+
+Profiling showed most of the time going to string work, not big-number arithmetic: testing whether a candidate contains an already-found prime as a subsequence, and building test numbers inside the divisibility checks. Both now run largely inside Python's C-implemented string and regular-expression routines. Timings without gmpy2:
+
+| Base | C | Python |
+|---|---|---|
+| 16 | 0.8 s | 1.7 s |
+| 17 | 6.8 s | 11.6 s |
+| 19 | 42 s | 68 s |
+| 20 | 1.3 s | 3.1 s |
+
+gmpy2 matters more in higher bases, where the primes being tested run to hundreds of digits.
 
 Run the tests with:
 
