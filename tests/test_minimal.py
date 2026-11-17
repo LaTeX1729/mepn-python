@@ -58,6 +58,13 @@ class TestDigits(unittest.TestCase):
                 self.assertEqual(to_int(s, base), n)
                 self.assertEqual(_parse_pure(s, base), n)
 
+    def test_long_numbers(self):
+        # Python 3.11+ limits int() to 4300 digits unless the limit is lifted.
+        from bright.digits import to_int, to_str
+        for base in (10, 12, 60):
+            s = "1" * 20000
+            self.assertEqual(to_str(to_int(s, base), base), s)
+
     def test_case_matters_above_36(self):
         from bright.digits import to_int
         self.assertEqual(to_int("A", 62), 10)
