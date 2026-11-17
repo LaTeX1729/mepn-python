@@ -18,6 +18,7 @@ entry that contains another.
 import sys
 import time
 
+from .digits import parser
 from .common import (append_line, data_files, file_for, in_target_set, parse_simple,
                      read_lines, subword, write_lines)
 
@@ -65,7 +66,7 @@ def run_simple(n, m, datadir="data", out=sys.stdout):
                 if k is not None and k <= num:
                     continue
                 candidate = start + middle * num + end
-                if in_target_set(int(candidate, base), tag):
+                if in_target_set(parser(base)(candidate), tag):
                     print("%s%s^(%d)%s (base %d) probably prime" % (start, middle, num, end, base),
                           file=out, flush=True)
                     append_line(kernel_path, candidate)

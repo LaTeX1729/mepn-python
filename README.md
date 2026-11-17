@@ -16,13 +16,17 @@ The LLR executable is available at http://jpenne.free.fr/index2.html.
 
 | C program (mepn) | Python | Notes |
 |---|---|---|
-| `minimal.c` | `bright/minimal.py` | Output identical to the C for bases 2–20. Adds a `--class a m` filter |
+| `minimal.c` | `bright/minimal.py` | Output identical to the C for bases 2–20 and 36. Extends to bases up to 62 and adds a `--class a m` filter |
 | `simple.c` | `bright/simple.py` | Output identical to the C |
 | `organize.c` | `bright/organize.py` | Output identical to the C |
 | `sieving.start.c`, `sieving.c`, `merge.c` | `bright/sieving.py` | Output identical to the C. Calls srsieve |
 | `search.c` | `bright/search.py` | Same tests and results as the C. Uses LLR if present, otherwise a built-in test |
 | `check.c`, `summary.c`, `unsolved.c` | — | Not translated (optional verification and reporting tools) |
 | `srsieve/` | `bin/` | srsieve stays in C. Tested executables for Windows and Linux are included |
+
+## Bases and digits
+
+Bases 2 to 62 are supported. Digits are `0`–`9`, then `A`–`Z` (10–35), then `a`–`z` (36–61). For example, in base 60 the digit `x` is 59. This is GMP's convention and the one used in `data-minimal-sets`. Bases up to 36 use only uppercase letters, as in the original C, which stops at base 36.
 
 ## Usage
 

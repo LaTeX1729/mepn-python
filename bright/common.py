@@ -16,9 +16,8 @@ import re
 import tempfile
 from math import gcd
 
+from .digits import DIGITS, to_int
 from .primality import is_probable_prime
-
-DIGITS = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ"
 
 _NAME = re.compile(r"^(minimal|unsolved|sieve)\.(\d+)((?:\.\d+mod\d+)?)\.txt$")
 _TAG = re.compile(r"^\.(\d+)mod(\d+)$")
@@ -129,9 +128,9 @@ def family_sequence(base, start, middle, end):
     sieving.start.c and search.c.
     """
     zlen = len(end)
-    x = int(start, base) if start else 0
-    y = int(middle, base)
-    z = int(end, base) if end else 0
+    x = to_int(start, base) if start else 0
+    y = to_int(middle, base)
+    z = to_int(end, base) if end else 0
     g = gcd(y, base - 1)
     q = (base - 1) // g
     K = (y // g + x * q) * base ** zlen

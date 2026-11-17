@@ -41,11 +41,10 @@ import re
 import sys
 from math import gcd, isqrt
 
+from .digits import DIGITS, MAX_BASE, check_base, parser, to_str
 from .primality import is_probable_prime
 
 EMPTY = 255
-DIGITS = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-MAX_BASE = 36
 
 
 # ---------------------------------------------------------------------------
@@ -176,8 +175,7 @@ class BrightMinimal:
     """
 
     def __init__(self, base, log=None, residue=None, modulus=None):
-        if not 2 <= base <= MAX_BASE:
-            raise ValueError("base must be between 2 and %d" % MAX_BASE)
+        check_base(base)
         if (residue is None) != (modulus is None):
             raise ValueError("give both residue and modulus, or neither")
         if modulus is not None:
@@ -185,6 +183,7 @@ class BrightMinimal:
                 raise ValueError("modulus must be at least 1")
             residue %= modulus
         self.base = base
+        self._parse = parser(base)
         self.iter = 0
         self.K = []
         self.log = log
@@ -199,7 +198,7 @@ class BrightMinimal:
     # -- numbers ----------------------------------------------------------
     def val(self, s):
         """``mpz_set_str(.., s, base)``; an empty string leaves the value 0."""
-        return int(s, self.base) if s else 0
+        return self._parse(s) if s else 0
 
     def isprime(self, s):
         """Membership in the target set: prime and, if a filter is set,
@@ -297,7 +296,7 @@ class BrightMinimal:
         nodes = [_DIGCH[d] for d, _ in p]
         reps = [[DIGITS[x] for x in r] for _, r in p]
         join = "".join
-        B_ = self.base
+        parse = self._parse
 
         def inst(*picks):
             # Same string as instancestring(p, picks), built more cheaply.
@@ -305,7 +304,7 @@ class BrightMinimal:
             for x, y in picks:
                 parts[x] += reps[x][y]
             s = join(parts)
-            return int(s, B_) if s else 0
+            return parse(s) if s else 0
 
         empty = inst()
         g = empty
@@ -698,7 +697,7 @@ class BrightMinimal:
             # the only possible prime is g itself; as g <= a < m (or g = m
             # when a = 0), that prime is a (or m when a = 0).
             p = self.residue if self.residue else self.modulus
-            self.K = [_to_base(p, B)] if is_probable_prime(p) else []
+            self.K = [to_str(p, B)] if is_probable_prime(p) else []
             return unsolved
         for i in range(B):
             for j in range(B):
@@ -781,14 +780,6 @@ class BrightMinimal:
                     unsolved.append((parse_family(line), 2))
         self.iter = iteration + 1
         return unsolved
-
-
-def _to_base(n, base):
-    out = ""
-    while n:
-        n, d = divmod(n, base)
-        out = DIGITS[d] + out
-    return out or "0"
 
 
 def parse_family(s):

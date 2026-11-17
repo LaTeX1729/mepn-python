@@ -47,6 +47,27 @@ class TestPrimality(unittest.TestCase):
         self.assertFalse(ip(318665857834031151167461))  # strong pseudoprime to bases 2..37
 
 
+class TestDigits(unittest.TestCase):
+    def test_round_trip_all_bases(self):
+        from bright.digits import _parse_pure, to_int, to_str
+        import random
+        rng = random.Random(1)
+        for base in range(2, 63):
+            for n in [0, 1, base - 1, base, base * base + 7] + [rng.getrandbits(400) for _ in range(5)]:
+                s = to_str(n, base)
+                self.assertEqual(to_int(s, base), n)
+                self.assertEqual(_parse_pure(s, base), n)
+
+    def test_case_matters_above_36(self):
+        from bright.digits import to_int
+        self.assertEqual(to_int("A", 62), 10)
+        self.assertEqual(to_int("a", 62), 36)
+        self.assertEqual(to_int("z", 62), 61)
+        self.assertEqual(to_int("10", 60), 60)
+        with self.assertRaises(ValueError):
+            to_int("x", 50)  # x = 59 is not a digit in base 50
+
+
 class TestFamilies(unittest.TestCase):
     def test_round_trip(self):
         for s in ["1{03}*2", "9{4}*{5}*1", "A{0}*{F}*{0}*B", "12", "4{8}*9"]:
@@ -86,7 +107,9 @@ class TestMinimalPrimes(unittest.TestCase):
 
     def test_bad_base(self):
         with self.assertRaises(ValueError):
-            BrightMinimal(37)
+            BrightMinimal(63)
+        with self.assertRaises(ValueError):
+            BrightMinimal(1)
 
 
 if __name__ == "__main__":
