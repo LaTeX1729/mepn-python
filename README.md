@@ -16,10 +16,13 @@ The LLR executable is available at http://jpenne.free.fr/index2.html.
 
 | C program (mepn) | Python | Notes |
 |---|---|---|
-| `minimal.c` | `bright/minimal.py` | Done. Output identical to the C program for bases 2–20. Adds a `--class a m` filter |
-| `simple.c`, `search.c`, `sieving*.c`, `merge.c` | — | To do |
-| `organize.c`, `check.c`, `summary.c`, `unsolved.c` | — | To do |
-| `srsieve/` | — | Separate refactor, kept as the original C for now |
+| `minimal.c` | `bright/minimal.py` | Output identical to the C for bases 2–20. Adds a `--class a m` filter |
+| `simple.c` | `bright/simple.py` | Output identical to the C |
+| `organize.c` | `bright/organize.py` | Output identical to the C |
+| `sieving.start.c`, `sieving.c`, `merge.c` | `bright/sieving.py` | Output identical to the C. Calls srsieve |
+| `search.c` | `bright/search.py` | Same tests and results as the C. Uses LLR if present, otherwise a built-in test |
+| `check.c`, `summary.c`, `unsolved.c` | — | Not translated (optional verification and reporting tools) |
+| `srsieve/` | `bin/` | srsieve stays in C. Tested executables for Windows and Linux are included |
 
 ## Usage
 
@@ -35,13 +38,48 @@ gmpy2 is a standalone library, not part of a larger package. It wraps GMP, the s
 python -c "import bright.primality as p; print(p.BACKEND)"   # gmpy2 or pure-python
 ```
 
-Run it as follows:
+### The full pipeline
+
+All commands run from the folder where `data/` should be kept:
 
 ```sh
-python -m bright.minimal 2 10         # bases 2 to 10
-python -m bright.minimal 17           # a single base
-python -m bright.minimal resume 17 8  # resume base 17 after iteration 8
+python -m bright minimal 2 20            # 1. minimal primes + unsolved families
+python -m bright simple 1 1000           # 2. test families at lengths 1..1000
+python -m bright organize                # 3. sort lists, drop redundant entries
+python -m bright sieve-start 1000 20000  # 4. sieve files for lengths 1000..20000
+python -m bright sieve 17 --pmax 1e9     # 5. sieve base 17 with srsieve (optional, speeds up 6)
+python -m bright search 1000 20000       # 6. test what is left (LLR if available)
+python -m bright organize                # 7. tidy up again
 ```
+
+`python -m bright --help` lists the commands. For example, base 20 runs completely in a few seconds:
+
+```sh
+python -m bright minimal 20
+python -m bright simple 1 100
+python -m bright organize
+python -m bright sieve-start 100 1000
+python -m bright sieve 20 --pmax 1e6
+python -m bright search 100 1000
+python -m bright organize      # data/minimal.20.txt now holds all 651 minimal primes
+```
+
+Some bases have minimal primes with tens of thousands of digits (base 13's largest is 8 0^32017 111). Those need long sieving and searching, which is where srsieve and LLR pay off.
+
+### srsieve
+
+srsieve (by Geoffrey Reynolds, GPL; source in `srsieve/`) is included ready to run:
+
+* `bin/windows-x64/srsieve.exe`, which needs only standard Windows system files
+* `bin/linux-x64/srsieve`, statically linked
+
+`python -m bright sieve` finds it automatically, or you can point to another copy with `--srsieve PATH` or the `BRIGHT_SRSIEVE` environment variable. Both executables are built by GitHub Actions (`.github/workflows/srsieve.yml`) and pass srsieve's full test suite before they are committed. To build it yourself, run `make` in `srsieve/`. On Windows, use MSYS2's MinGW-w64 toolchain.
+
+The C `sieving` program stopped srsieve every two hours with the Unix `timeout` command, which Windows lacks. The Python version runs srsieve in rounds, each ending at a prime limit, so srsieve always finishes and saves normally. Ctrl-C stops it safely.
+
+### LLR (optional)
+
+`search` uses LLR if it finds it (`llr`/`llr.exe`/`cllr64.exe` in the current folder or on PATH, or set with `--llr PATH` or `BRIGHT_LLR`). Download it from http://jpenne.free.fr/index2.html. Without LLR, the built-in test is used. It is fine for numbers with a few thousand digits; LLR is much faster beyond that. Use `--no-llr` to force the built-in test.
 
 ### Filtering by residue class
 
@@ -99,6 +137,10 @@ Profiling showed most of the time going to string work, not big-number arithmeti
 
 gmpy2 matters more in higher bases, where the primes being tested run to hundreds of digits.
 
+The follow-up programs were also checked against their C versions on the unsolved families of bases 2–20: `simple` (lengths 1–400), `organize`, `sieve-start` (lengths 400–1500), sieving to p = 10⁶ with `merge`, and `search` (lengths 400–1000). Every data file came out identical. After `simple` and `organize`, 14 of the 19 bases are complete and match `data-minimal-sets` exactly.
+
+GitHub Actions (`.github/workflows/tests.yml`) runs the tests and a complete base-20 run on Windows and Linux, with and without gmpy2.
+
 Run the tests with:
 
 ```sh
@@ -109,4 +151,5 @@ python -m unittest discover tests
 
 * **It gives wrong results on current Linux.** `minimal.c` builds strings with `sprintf(str, "%s%c", str, c)`, which reads and writes the same buffer. glibc 2.37 and later no longer appends in this case; it overwrites. Compiled as-is on a modern system, the program finds only 6 of the 8 base-5 minimal primes and then loops forever. The Python version uses the intended "append" behaviour. To rebuild the C for comparison, route `sprintf` through a temporary buffer.
 * **Resuming reads from a closed file.** `minimal resume b i` reads the unsolved families through the kernel file handle it has just closed. This is undefined behaviour. It currently works only because glibc reuses the closed handle's memory for the next file opened. The Python version reads `iter/unsolved-base<b>-iter<i>.txt` directly. A resumed run gives the same results as a full run (checked on base 13 from iteration 5).
+* **`simple.c` has the same sprintf problem** when it builds candidates, so on current Linux it tests the wrong numbers.
 * **Primality testing.** The C code uses GMP's `mpz_probab_prime_p(n, 25)`. Without `gmpy2`, the Python uses a Baillie–PSW test (deterministic Miller–Rabin below 3.3·10²⁴). No Baillie–PSW pseudoprime is known.

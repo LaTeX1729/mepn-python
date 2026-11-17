@@ -1,0 +1,52 @@
+# Runs the Python tests and a short end-to-end pipeline on Windows and Linux,
+# using the bundled srsieve executable.
+name: Tests
+
+on:
+  push:
+    paths:
+      - "bright/**"
+      - "tests/**"
+      - "bin/**"
+      - ".github/workflows/tests.yml"
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  test:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, ubuntu-latest]
+        gmpy2: [without, with]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install gmpy2
+        if: matrix.gmpy2 == 'with'
+        run: pip install gmpy2
+      - name: Primality backend
+        run: python -c "import bright.primality as p; print(p.BACKEND)"
+      - name: Unit tests
+        run: python -m unittest discover -v tests
+      - name: End-to-end run (base 20, using the bundled srsieve)
+        shell: bash
+        run: |
+          mkdir run && cd run
+          export PYTHONPATH=..
+          python -m bright minimal 20 > minimal.log
+          python -m bright simple 1 100
+          python -m bright organize
+          python -m bright sieve-start 100 1000
+          python -m bright sieve 20 --pmax 1000000
+          python -m bright search 100 1000 --no-llr
+          python -m bright organize
+          python - <<'EOF'
+          ref = set(open("../data-minimal-sets/minimal.20.txt").read().split())
+          got = open("data/minimal.20.txt").read().split()
+          assert set(got) == ref, (len(got), len(ref), sorted(ref - set(got))[:5])
+          print("base 20 complete:", len(got), "minimal primes, matching the reference set")
+          EOF
