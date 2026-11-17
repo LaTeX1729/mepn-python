@@ -175,13 +175,26 @@ class BrightMinimal:
     ``base``, ``iter`` and ``K`` were globals in the C program.
     """
 
-    def __init__(self, base, log=None):
+    def __init__(self, base, log=None, residue=None, modulus=None):
         if not 2 <= base <= MAX_BASE:
             raise ValueError("base must be between 2 and %d" % MAX_BASE)
+        if (residue is None) != (modulus is None):
+            raise ValueError("give both residue and modulus, or neither")
+        if modulus is not None:
+            if modulus < 1:
+                raise ValueError("modulus must be at least 1")
+            residue %= modulus
         self.base = base
         self.iter = 0
         self.K = []
         self.log = log
+        self.residue = residue
+        self.modulus = modulus
+
+    @property
+    def tag(self):
+        """Suffix for output file names: '' or e.g. '.1mod4'."""
+        return "" if self.modulus is None else ".%dmod%d" % (self.residue, self.modulus)
 
     # -- numbers ----------------------------------------------------------
     def val(self, s):
@@ -189,7 +202,35 @@ class BrightMinimal:
         return int(s, self.base) if s else 0
 
     def isprime(self, s):
-        return is_probable_prime(self.val(s))
+        """Membership in the target set: prime and, if a filter is set,
+        congruent to residue mod modulus."""
+        n = self.val(s)
+        if self.modulus is not None and n % self.modulus != self.residue:
+            return False
+        return is_probable_prime(n)
+
+    def misses_class(self, p):
+        """True if no member of family p is congruent to residue mod modulus.
+
+        The residues reachable by members of the family are computed exactly,
+        in the same way as the mod-30 test in hasdivisor.
+        """
+        if self.modulus is None:
+            return False
+        m, B = self.modulus, self.base
+        reach = {0}
+        for d, r in p:
+            if d != EMPTY:
+                reach = {(x * B + d) % m for x in reach}
+            frontier = list(reach)
+            while frontier:
+                x = frontier.pop()
+                for rep in r:
+                    y = (x * B + rep) % m
+                    if y not in reach:
+                        reach.add(y)
+                        frontier.append(y)
+        return self.residue not in reach
 
     # -- kernel -------------------------------------------------------------
     # The subword test dominates the running time, so the kernel is compiled
@@ -457,6 +498,10 @@ class BrightMinimal:
         if not any(residues[i] and gcd(i, 30) == 1 for i in range(30)):
             return True
 
+        # Filter: no member of the family lies in the residue class.
+        if self.misses_class(p):
+            return True
+
         return False
 
     # -- examine -----------------------------------------------------------
@@ -647,6 +692,14 @@ class BrightMinimal:
         """Kernel of 1-3 digit primes, then explore families x{R}*y."""
         B = self.base
         unsolved = []
+        self.iter = 0
+        if self.modulus is not None and gcd(self.residue, self.modulus) > 1:
+            # Every member of the class is divisible by g = gcd(a, m) > 1, so
+            # the only possible prime is g itself; as g <= a < m (or g = m
+            # when a = 0), that prime is a (or m when a = 0).
+            p = self.residue if self.residue else self.modulus
+            self.K = [_to_base(p, B)] if is_probable_prime(p) else []
+            return unsolved
         for i in range(B):
             for j in range(B):
                 for k in range(B):
@@ -700,9 +753,9 @@ class BrightMinimal:
 
             if write_iter:
                 os.makedirs(iterdir, exist_ok=True)
-                with open(os.path.join(iterdir, "unsolved-base%d-iter%d.txt" % (B, self.iter)), "w") as fh:
+                with open(os.path.join(iterdir, "unsolved-base%d%s-iter%d.txt" % (B, self.tag, self.iter)), "w") as fh:
                     fh.writelines(familystring(f) + "\n" for f, _ in unsolved)
-                with open(os.path.join(iterdir, "minimal-base%d-iter%d.txt" % (B, self.iter)), "w") as fh:
+                with open(os.path.join(iterdir, "minimal-base%d%s-iter%d.txt" % (B, self.tag, self.iter)), "w") as fh:
                     fh.writelines(p + "\n" for p in self.K)
 
             if not unsolved:
@@ -718,16 +771,24 @@ class BrightMinimal:
     def resume(self, iteration, iterdir="iter"):
         """Reload kernel and unsolved families saved after ``iteration``."""
         B = self.base
-        with open(os.path.join(iterdir, "minimal-base%d-iter%d.txt" % (B, iteration))) as fh:
+        with open(os.path.join(iterdir, "minimal-base%d%s-iter%d.txt" % (B, self.tag, iteration))) as fh:
             self.K = [line.rstrip("\n") for line in fh if line.rstrip("\n")]
         unsolved = []
-        with open(os.path.join(iterdir, "unsolved-base%d-iter%d.txt" % (B, iteration))) as fh:
+        with open(os.path.join(iterdir, "unsolved-base%d%s-iter%d.txt" % (B, self.tag, iteration))) as fh:
             for line in fh:
                 line = line.rstrip("\n")
                 if line:
                     unsolved.append((parse_family(line), 2))
         self.iter = iteration + 1
         return unsolved
+
+
+def _to_base(n, base):
+    out = ""
+    while n:
+        n, d = divmod(n, base)
+        out = DIGITS[d] + out
+    return out or "0"
 
 
 def parse_family(s):
@@ -751,13 +812,17 @@ def parse_family(s):
 
 
 def compute_base(base, log=sys.stdout, write_files=True, datadir="data", iterdir="iter",
-                 resume_iter=None):
+                 resume_iter=None, residue=None, modulus=None):
     """Run the Bright Algorithm for one base.
+
+    With ``residue`` and ``modulus`` set, computes the minimal elements of
+    the primes p with p = residue (mod modulus) instead of all primes.
 
     Returns (minimal primes, unsolved families).
     """
-    bm = BrightMinimal(base, log=log)
-    bm._say("base %d..." % base)
+    bm = BrightMinimal(base, log=log, residue=residue, modulus=modulus)
+    bm._say("base %d..." % base if bm.modulus is None
+            else "base %d, primes = %d mod %d..." % (base, bm.residue, bm.modulus))
     if resume_iter is None:
         unsolved = bm.initial()
     else:
@@ -766,31 +831,45 @@ def compute_base(base, log=sys.stdout, write_files=True, datadir="data", iterdir
     kernel = bm.final_kernel()
     if write_files:
         os.makedirs(datadir, exist_ok=True)
-        with open(os.path.join(datadir, "minimal.%d.txt" % base), "w") as fh:
+        with open(os.path.join(datadir, "minimal.%d%s.txt" % (base, bm.tag)), "w") as fh:
             fh.writelines(p + "\n" for p in kernel)
         if unsolved:
-            with open(os.path.join(datadir, "unsolved.%d.txt" % base), "w") as fh:
+            with open(os.path.join(datadir, "unsolved.%d%s.txt" % (base, bm.tag)), "w") as fh:
                 for f, _ in unsolved:
                     fh.write((simplefamilystring(f) if issimple(f) else familystring(f)) + "\n")
     return kernel, [f for f, _ in unsolved]
 
 
+USAGE = """\
+Computes minimal primes for bases between l and h,
+possibly along with a set of unsolved families
+Usage: python -m bright.minimal l h [--class a m]
+To resume base b from iteration i: python -m bright.minimal resume b i [--class a m]
+  --class a m   only primes p with p = a (mod m), e.g. --class 1 4"""
+
+
 def main(argv=None):
-    argv = sys.argv[1:] if argv is None else argv
+    argv = list(sys.argv[1:] if argv is None else argv)
+    residue = modulus = None
+    if "--class" in argv:
+        k = argv.index("--class")
+        try:
+            residue, modulus = int(argv[k + 1]), int(argv[k + 2])
+        except (IndexError, ValueError):
+            print("--class needs two integers: a m", file=sys.stderr)
+            return 2
+        del argv[k:k + 3]
     if not argv:
-        print("Computes minimal primes for bases between l and h,")
-        print("possibly along with a set of unsolved families")
-        print("Usage: python -m bright.minimal l h")
-        print("To resume base b from iteration i: python -m bright.minimal resume b i")
+        print(USAGE)
         return 0
     if argv[0] == "resume":
         base, it = int(argv[1]), int(argv[2])
-        compute_base(base, resume_iter=it)
+        compute_base(base, resume_iter=it, residue=residue, modulus=modulus)
         return 0
     lo = int(argv[0])
     hi = int(argv[1]) if len(argv) > 1 else lo
     for base in range(lo, hi + 1):
-        compute_base(base)
+        compute_base(base, residue=residue, modulus=modulus)
     return 0
 
 

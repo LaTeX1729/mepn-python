@@ -91,3 +91,59 @@ class TestMinimalPrimes(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TestClassFilter(unittest.TestCase):
+    """--class a m: minimal elements of the primes p = a (mod m)."""
+
+    @staticmethod
+    def brute_force(base, a, m, digits):
+        limit = base ** digits
+        sieve = bytearray([1]) * limit
+        sieve[0:2] = b"\x00\x00"
+        for p in range(2, int(limit ** 0.5) + 1):
+            if sieve[p]:
+                sieve[p * p :: p] = bytearray(len(range(p * p, limit, p)))
+        digs = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+        mins = []
+        for n in range(2, limit):
+            if sieve[n] and n % m == a:
+                s = ""
+                while n:
+                    n, d = divmod(n, base)
+                    s = digs[d] + s
+                if not any(re.search(".*".join(q), s) for q in mins):
+                    mins.append(s)
+        return set(mins)
+
+    def check(self, base, a, m, digits):
+        kernel, unsolved = compute_base(base, log=None, write_files=False, residue=a, modulus=m)
+        for p in kernel:
+            self.assertEqual(int(p, base) % m, a, p)
+        names = [simplefamilystring(f) if issimple(f) else familystring(f) for f in unsolved]
+        patterns = [re.compile("^" + re.sub(r"\{([^}]*)\}\*", r"[\1]*", n) + "$") for n in names]
+        expected = self.brute_force(base, a, m, digits)
+        short = {p for p in kernel if len(p) <= digits}
+        self.assertTrue(short <= expected, sorted(short - expected))
+        for p in expected - set(kernel):
+            self.assertTrue(any(r.match(p) for r in patterns), p)
+
+    def test_base10_mod5(self):
+        for a in (1, 2, 3, 4):
+            with self.subTest(a=a):
+                self.check(10, a, 5, 6)
+
+    def test_small_bases(self):
+        for base, a, m in [(2, 1, 3), (2, 2, 3), (3, 1, 4), (3, 3, 4), (6, 1, 5), (7, 2, 3)]:
+            with self.subTest(base=base, a=a, m=m):
+                self.check(base, a, m, 6 if base < 7 else 5)
+
+    def test_class_sharing_a_factor(self):
+        cases = {(10, 0, 3): ["3"], (10, 7, 14): ["7"], (10, 6, 12): [], (2, 0, 3): ["11"]}
+        for (base, a, m), want in cases.items():
+            self.assertEqual(compute_base(base, log=None, write_files=False,
+                                          residue=a, modulus=m), (want, []))
+
+    def test_unfiltered_unchanged(self):
+        self.assertEqual(compute_base(10, log=None, write_files=False),
+                         compute_base(10, log=None, write_files=False, residue=0, modulus=1))

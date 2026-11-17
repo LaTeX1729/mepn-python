@@ -16,7 +16,7 @@ The LLR executable is available at http://jpenne.free.fr/index2.html.
 
 | C program (mepn) | Python | Notes |
 |---|---|---|
-| `minimal.c` | `bright/minimal.py` | Done. Output identical to the C program for bases 2–20 |
+| `minimal.c` | `bright/minimal.py` | Done. Output identical to the C program for bases 2–20. Adds a `--class a m` filter |
 | `simple.c`, `search.c`, `sieving*.c`, `merge.c` | — | To do |
 | `organize.c`, `check.c`, `summary.c`, `unsolved.c` | — | To do |
 | `srsieve/` | — | Separate refactor, kept as the original C for now |
@@ -42,6 +42,28 @@ python -m bright.minimal 2 10         # bases 2 to 10
 python -m bright.minimal 17           # a single base
 python -m bright.minimal resume 17 8  # resume base 17 after iteration 8
 ```
+
+### Filtering by residue class
+
+`--class a m` restricts the search to primes p ≡ a (mod m). The program then computes the minimal elements of that set: the primes in the class that contain no smaller prime from the class as a subsequence of their digits.
+
+```sh
+python -m bright.minimal 10 --class 1 4    # base 10, primes = 1 mod 4
+python -m bright.minimal 2 16 --class 2 3  # bases 2-16, primes = 2 mod 3
+```
+
+Results go to files tagged with the class, e.g. `data/minimal.10.1mod4.txt` and `iter/minimal-base10.1mod4-iter3.txt`, so they don't overwrite unfiltered runs.
+
+This is an extension, not part of Bright's original program. Two changes keep the algorithm correct:
+
+* **Adding primes:** a prime joins the set only if it is in the class.
+* **Ruling out families:** a family is discarded when none of its members can be in the class. The program tracks which remainders mod m the family's members can reach, the same technique the original uses mod 30.
+
+When gcd(a, m) > 1, every member of the class is divisible by gcd(a, m). The answer is then at most one prime (a itself, or m when a = 0), and it is given directly.
+
+The filter was checked by brute force on 108 combinations of base (2–16) and class (moduli 3–12). For each, every prime in the class below about 2·10⁷ was listed and its minimal elements computed directly. There were no disagreements. 47 runs finished with nothing unsolved and matched the brute force exactly. In 19 more, everything the brute force found but the program didn't report lies in one of the program's unsolved families. The remaining 42 took over 30 seconds and were not checked.
+
+**Limitation:** some classes are much harder than the unfiltered problem. In base 10 with m = 7, for example, very few families can be ruled out early, so the search grows to tens of thousands of open families and can take a very long time.
 
 As with the C program, results go to `data/minimal.<b>.txt` and (if any families remain) `data/unsolved.<b>.txt`, with per-iteration snapshots in `iter/`. Progress lines (`base … iteration … split … size … remain …`) are printed to standard output.
 
