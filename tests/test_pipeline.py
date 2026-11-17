@@ -84,6 +84,32 @@ class SievingTest(unittest.TestCase):
             self.assertEqual(n in kept, not small, n)
 
 
+class LLRTest(unittest.TestCase):
+    def test_output_parsing(self):
+        from bright.search import parse_llr_output
+        self.assertEqual(parse_llr_output("(5*12^9+1)/1 is base 3-Strong Fermat PRP! (9 decimal digits)"), "PRP")
+        self.assertEqual(parse_llr_output("5*12^9-1 is prime! (10 decimal digits)  Time : 0.1 sec."), "PRP")
+        self.assertEqual(parse_llr_output("(5*12^9+1)/11 is not prime.  RES64: 0123456789ABCDEF"), "composite")
+        self.assertIsNone(parse_llr_output("Error"))
+
+    def test_finds_bundled_names(self):
+        from bright.search import LLR_NAMES
+        from bright.sieving import find_executable, platform_dir
+        d = platform_dir()
+        os.makedirs(d, exist_ok=True)
+        name = "sllr64" if os.name != "nt" else "cllr64.exe"
+        path = os.path.join(d, name)
+        if os.path.exists(path):
+            self.skipTest("a real LLR is installed")
+        with open(path, "w") as fh:
+            fh.write("")
+        try:
+            os.chmod(path, 0o755)
+            self.assertEqual(find_executable(LLR_NAMES, "BRIGHT_LLR_UNSET"), os.path.abspath(path))
+        finally:
+            os.remove(path)
+
+
 class SubwordTest(unittest.TestCase):
     def test_subword(self):
         self.assertEqual(subword("649", "6", "0", "49"), (True, 0))

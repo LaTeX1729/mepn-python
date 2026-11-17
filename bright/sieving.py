@@ -134,26 +134,42 @@ def merge(datadir="data", sievedir=SIEVE_DIR):
         write_lines(work, lines)
 
 
-def find_executable(name, env_var):
-    """Look for a helper program (srsieve, llr).
-
-    Order: the environment variable, the bundled bin/<platform>/ folder,
-    the current folder, then PATH.
-    """
-    exe = name + (".exe" if os.name == "nt" else "")
-    candidates = []
-    if os.environ.get(env_var):
-        candidates.append(os.environ[env_var])
+def platform_dir():
+    """bin/<system>-<arch> folder for this computer, e.g. bin/windows-x64."""
     here = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     machine = platform.machine().lower()
     arch = "x64" if machine in ("x86_64", "amd64") else machine
     system = {"win32": "windows", "darwin": "macos"}.get(sys.platform, sys.platform)
-    candidates.append(os.path.join(here, "bin", "%s-%s" % (system, arch), exe))
-    candidates += [os.path.join(".", exe), os.path.join(".", name, exe)]
+    return os.path.join(here, "bin", "%s-%s" % (system, arch))
+
+
+def find_executable(names, env_var):
+    """Look for a helper program (srsieve, LLR) under any of ``names``.
+
+    Order: the environment variable, the bundled bin/<platform>/ folder,
+    the current folder, then PATH. On Windows ".exe" is added to each name.
+    A file that exists but is not executable is reported, not silently
+    skipped (unzipping on Linux can drop the executable permission).
+    """
+    if isinstance(names, str):
+        names = [names]
+    suffix = ".exe" if os.name == "nt" else ""
+    candidates = []
+    if os.environ.get(env_var):
+        candidates.append(os.environ[env_var])
+    for folder in (platform_dir(), "."):
+        candidates += [os.path.join(folder, n + suffix) for n in names]
     for c in candidates:
-        if os.path.isfile(c) and os.access(c, os.X_OK):
-            return os.path.abspath(c)
-    return shutil.which(name)
+        if os.path.isfile(c):
+            if os.access(c, os.X_OK):
+                return os.path.abspath(c)
+            print("found %s but it is not executable; run: chmod +x %s" % (c, c),
+                  file=sys.stderr)
+    for n in names:
+        found = shutil.which(n)
+        if found:
+            return found
+    return None
 
 
 def run_sieve(base, tag="", pmax=None, srsieve=None, growth=4, datadir="data",

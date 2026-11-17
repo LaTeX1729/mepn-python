@@ -5,7 +5,8 @@ exponents of each unsolved family in increasing order. The first prime found
 in a family is added to ``data/minimal.<b>.txt`` and the family is removed.
 
 Primality testing uses LLR (http://jpenne.free.fr) if it can be found, as
-the C version does. LLR is much faster for numbers with thousands of digits.
+the C version does: ``bin/linux-x64/sllr64`` on Linux (including WSL) and
+``bin/windows-x64/cllr64.exe`` on Windows (keep its DLLs beside it). LLR is much faster for numbers with thousands of digits.
 Otherwise the built-in test is used (gmpy2 if installed, else pure Python).
 
 Usage::
@@ -30,6 +31,11 @@ from .sieving import find_executable, format_sieve, parse_sieve
 
 INF = 0x7FFFFFFF
 
+# LLR's usual executable names: sllr64 (Linux, static), cllr64 (Windows
+# console), plus plain llr. Searched in bin/<platform>/, the current folder
+# and PATH.
+LLR_NAMES = ["sllr64", "cllr64", "llr64", "llr"]
+
 
 def llr_test(llr, base, A, c, C, q, llr_arg=None):
     """Run LLR on (A * base^c + C) / q. Returns 'PRP', 'composite' or None."""
@@ -47,10 +53,20 @@ def llr_test(llr, base, A, c, C, q, llr_arg=None):
     if "(Factored" in output:
         output = output[: output.index("(Factored")]
     print(output, end="", flush=True)
-    if "PRP" in output:
-        return "PRP"
+    return parse_llr_output(output)
+
+
+def parse_llr_output(output):
+    """'PRP', 'composite' or None from LLR's output.
+
+    search.c only looked for "PRP" and "not prime". LLR can also prove
+    primality (e.g. "... is prime! (...)") for forms like k*b^n+-1, so a
+    proven prime is accepted too.
+    """
     if "not prime" in output:
         return "composite"
+    if "PRP" in output or "is prime" in output or "robable prime" in output:
+        return "PRP"
     return None
 
 
@@ -153,7 +169,7 @@ def main(argv=None):
         print(__doc__)
         return 0
     if use_llr and llr is None:
-        llr = find_executable("llr", "BRIGHT_LLR") or find_executable("cllr64", "BRIGHT_LLR")
+        llr = find_executable(LLR_NAMES, "BRIGHT_LLR")
     if not use_llr:
         llr = None
     print("primality test: %s" % (llr or "built-in"), flush=True)

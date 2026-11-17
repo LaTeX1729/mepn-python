@@ -83,7 +83,16 @@ The C `sieving` program stopped srsieve every two hours with the Unix `timeout` 
 
 ### LLR (optional)
 
-`search` uses LLR if it finds it (`llr`/`llr.exe`/`cllr64.exe` in the current folder or on PATH, or set with `--llr PATH` or `BRIGHT_LLR`). Download it from http://jpenne.free.fr/index2.html. Without LLR, the built-in test is used. It is fine for numbers with a few thousand digits; LLR is much faster beyond that. Use `--no-llr` to force the built-in test.
+`search` uses LLR (Jean Penné, http://jpenne.free.fr/index2.html) when it finds it. Put it here:
+
+* Linux, including WSL: `bin/linux-x64/sllr64`
+* Windows: `bin/windows-x64/cllr64.exe`, with its DLLs in the same folder
+
+It is also found as `llr`/`llr64` in those folders, in the current folder, or on PATH, or you can set `--llr PATH` or `BRIGHT_LLR`. The first line `search` prints shows which test is in use. If LLR exists but isn't executable (unzipping on Linux can drop the permission), `search` tells you to run `chmod +x`. LLR writes its own files (such as `lresults.txt`, `llr.ini`) in the folder you run from.
+
+`search` accepts LLR's "PRP" results, and also proven primes ("is prime!"), which LLR reports for forms like k·bⁿ±1. `search.c` only recognised "PRP" and would retry such a number forever.
+
+Without LLR, the built-in test is used. It is fine for numbers with a few thousand digits; LLR is much faster beyond that. Use `--no-llr` to force the built-in test.
 
 ### Filtering by residue class
 
