@@ -58,3 +58,34 @@ jobs:
         with:
           name: srsieve-linux-x64
           path: srsieve/srsieve
+
+  # Commit the tested executables to bin/ so they ship with the program.
+  publish:
+    needs: [windows, linux]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref_name }}
+      - uses: actions/download-artifact@v4
+        with:
+          name: srsieve-windows-x64
+          path: bin/windows-x64
+      - uses: actions/download-artifact@v4
+        with:
+          name: srsieve-linux-x64
+          path: bin/linux-x64
+      - name: Commit binaries
+        run: |
+          chmod +x bin/linux-x64/srsieve bin/windows-x64/srsieve.exe
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add bin/
+          if git diff --cached --quiet; then
+            echo "Binaries unchanged."
+          else
+            git commit -m "Update srsieve executables (built and tested by GitHub Actions run ${{ github.run_id }})"
+            git push
+          fi
