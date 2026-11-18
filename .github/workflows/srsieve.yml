@@ -1,0 +1,91 @@
+# Builds srsieve (srsieve/, GPL, by Geoffrey Reynolds) for Windows and Linux,
+# runs srsieve's own test suite on each, and uploads the executables.
+name: Build srsieve
+
+on:
+  push:
+    paths:
+      - "srsieve/**"
+      - ".github/workflows/srsieve.yml"
+  workflow_dispatch:
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: msys2 {0}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: msys2/setup-msys2@v2
+        with:
+          msystem: MINGW64
+          install: >-
+            make
+            diffutils
+            mingw-w64-x86_64-gcc
+            mingw-w64-x86_64-gmp
+      - name: Build (portable C; the k8 assembly assumes the Linux calling convention)
+        working-directory: srsieve
+        run: |
+          rm -f srsieve srsieve.exe *.o
+          make srsieve LDFLAGS=-static
+          ls -l srsieve.exe
+      - name: Test (srsieve's own test suite, including the GMP arithmetic check)
+        working-directory: srsieve
+        run: make -o srsieve check
+      - uses: actions/upload-artifact@v4
+        with:
+          name: srsieve-windows-x64
+          path: srsieve/srsieve.exe
+
+  linux:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install GMP (only needed for the arithmetic self-test)
+        run: sudo apt-get update && sudo apt-get install -y libgmp-dev
+      - name: Build (x86-64 assembly, statically linked)
+        working-directory: srsieve
+        run: |
+          rm -f srsieve *.o
+          make ARCH=k8 srsieve LDFLAGS=-static
+          strip srsieve
+      - name: Test
+        working-directory: srsieve
+        run: make ARCH=k8 -o srsieve check
+      - uses: actions/upload-artifact@v4
+        with:
+          name: srsieve-linux-x64
+          path: srsieve/srsieve
+
+  # Commit the tested executables to bin/ so they ship with the program.
+  publish:
+    needs: [windows, linux]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref_name }}
+      - uses: actions/download-artifact@v4
+        with:
+          name: srsieve-windows-x64
+          path: bin/windows-x64
+      - uses: actions/download-artifact@v4
+        with:
+          name: srsieve-linux-x64
+          path: bin/linux-x64
+      - name: Commit binaries
+        run: |
+          chmod +x bin/linux-x64/srsieve bin/windows-x64/srsieve.exe
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add bin/
+          if git diff --cached --quiet; then
+            echo "Binaries unchanged."
+          else
+            git commit -m "Update srsieve executables (built and tested by GitHub Actions run ${{ github.run_id }})"
+            git push
+          fi

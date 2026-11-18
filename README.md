@@ -2,8 +2,167 @@
 
 The mepn-python repository is a refactoring of https://github.com/curtisbright/mepn from C to Python using Claude.
 
+The algorithm and the original C implementation are by **Curtis Bright**. This repository calls it the *Bright Algorithm* to credit him. It is described in:
+
+> C. Bright, R. Devillers and J. Shallit, "Minimal elements for the prime numbers", *Experimental Mathematics* 25(3), 2016, pp. 321–331.
+
 See the repositories https://github.com/curtisbright/mepn and https://github.com/RaymondDevillers/primes.
 
 The srsieve program is also available at https://github.com/curtisbright/mepn-data/tree/master/srsieve.
 
 The LLR executable is available at http://jpenne.free.fr/index2.html.
+
+## Status
+
+| C program (mepn) | Python | Notes |
+|---|---|---|
+| `minimal.c` | `bright/minimal.py` | Output identical to the C for bases 2–20 and 36. Extends to bases up to 62 and adds a `--class a m` filter |
+| `simple.c` | `bright/simple.py` | Output identical to the C |
+| `organize.c` | `bright/organize.py` | Output identical to the C |
+| `sieving.start.c`, `sieving.c`, `merge.c` | `bright/sieving.py` | Output identical to the C. Calls srsieve |
+| `search.c` | `bright/search.py` | Same tests and results as the C. Uses LLR if present, otherwise a built-in test |
+| `check.c`, `summary.c`, `unsolved.c` | — | Not translated (optional verification and reporting tools) |
+| `srsieve/` | `bin/` | srsieve stays in C. Tested executables for Windows and Linux are included |
+
+## Bases and digits
+
+Bases 2 to 62 are supported. Digits are `0`–`9`, then `A`–`Z` (10–35), then `a`–`z` (36–61). For example, in base 60 the digit `x` is 59. This is GMP's convention and the one used in `data-minimal-sets`. Bases up to 36 use only uppercase letters, as in the original C, which stops at base 36.
+
+## Usage
+
+Requires Python 3.8+. It runs with no extra packages, but installing **gmpy2** is recommended for speed:
+
+```sh
+pip install gmpy2            # or: pip install -r requirements.txt
+```
+
+gmpy2 is a standalone library, not part of a larger package. It wraps GMP, the same arithmetic library the original C code uses, and ships ready-made for Windows, macOS and Linux. With it installed, primality testing uses GMP's own `mpz_probab_prime_p`, exactly as in the C version. To check which is in use:
+
+```sh
+python -c "import bright.primality as p; print(p.BACKEND)"   # gmpy2 or pure-python
+```
+
+### The full pipeline
+
+All commands run from the folder where `data/` should be kept:
+
+```sh
+python -m bright minimal 2 20            # 1. minimal primes + unsolved families
+python -m bright simple 1 1000           # 2. test families at lengths 1..1000
+python -m bright organize                # 3. sort lists, drop redundant entries
+python -m bright sieve-start 1000 20000  # 4. sieve files for lengths 1000..20000
+python -m bright sieve 17 --pmax 1e9     # 5. sieve base 17 with srsieve (optional, speeds up 6)
+python -m bright search 1000 20000       # 6. test what is left (LLR if available)
+python -m bright organize                # 7. tidy up again
+```
+
+`python -m bright --help` lists the commands. For example, base 20 runs completely in a few seconds:
+
+```sh
+python -m bright minimal 20
+python -m bright simple 1 100
+python -m bright organize
+python -m bright sieve-start 100 1000
+python -m bright sieve 20 --pmax 1e6
+python -m bright search 100 1000
+python -m bright organize      # data/minimal.20.txt now holds all 651 minimal primes
+```
+
+Some bases have minimal primes with tens of thousands of digits (base 13's largest is 8 0^32017 111). Those need long sieving and searching, which is where srsieve and LLR pay off.
+
+### srsieve
+
+srsieve (by Geoffrey Reynolds, GPL; source in `srsieve/`) is included ready to run:
+
+* `bin/windows-x64/srsieve.exe`, which needs only standard Windows system files
+* `bin/linux-x64/srsieve`, statically linked
+
+`python -m bright sieve` finds it automatically, or you can point to another copy with `--srsieve PATH` or the `BRIGHT_SRSIEVE` environment variable. Both executables are built by GitHub Actions (`.github/workflows/srsieve.yml`) and pass srsieve's full test suite before they are committed. To build it yourself, run `make` in `srsieve/`. On Windows, use MSYS2's MinGW-w64 toolchain.
+
+The C `sieving` program stopped srsieve every two hours with the Unix `timeout` command, which Windows lacks. The Python version runs srsieve in rounds, each ending at a prime limit, so srsieve always finishes and saves normally. Ctrl-C stops it safely.
+
+### LLR (optional)
+
+`search` uses LLR (Jean Penné, http://jpenne.free.fr/index2.html) when it finds it. Put it here:
+
+* Linux, including WSL: `bin/linux-x64/sllr64`
+* Windows: `bin/windows-x64/cllr64.exe`, with its DLLs in the same folder
+
+It is also found as `llr`/`llr64` in those folders, in the current folder, or on PATH, or you can set `--llr PATH` or `BRIGHT_LLR`. The first line `search` prints shows which test is in use. If LLR exists but isn't executable (unzipping on Linux can drop the permission), `search` tells you to run `chmod +x`. LLR writes its own files (such as `lresults.txt`, `llr.ini`) in the folder you run from.
+
+`search` accepts LLR's "PRP" results, and also proven primes ("is prime!"), which LLR reports for forms like k·bⁿ±1. `search.c` only recognised "PRP" and would retry such a number forever.
+
+Without LLR, the built-in test is used. It is fine for numbers with a few thousand digits; LLR is much faster beyond that. Use `--no-llr` to force the built-in test.
+
+### Filtering by residue class
+
+`--class a m` restricts the search to primes p ≡ a (mod m). The program then computes the minimal elements of that set: the primes in the class that contain no smaller prime from the class as a subsequence of their digits.
+
+```sh
+python -m bright.minimal 10 --class 1 4    # base 10, primes = 1 mod 4
+python -m bright.minimal 2 16 --class 2 3  # bases 2-16, primes = 2 mod 3
+```
+
+Results go to files tagged with the class, e.g. `data/minimal.10.1mod4.txt` and `iter/minimal-base10.1mod4-iter3.txt`, so they don't overwrite unfiltered runs.
+
+This is an extension, not part of Bright's original program. Two changes keep the algorithm correct:
+
+* **Adding primes:** a prime joins the set only if it is in the class.
+* **Ruling out families:** a family is discarded when none of its members can be in the class. The program tracks which remainders mod m the family's members can reach, the same technique the original uses mod 30.
+
+When gcd(a, m) > 1, every member of the class is divisible by gcd(a, m). The answer is then at most one prime (a itself, or m when a = 0), and it is given directly.
+
+The filter was checked by brute force on 108 combinations of base (2–16) and class (moduli 3–12). For each, every prime in the class below about 2·10⁷ was listed and its minimal elements computed directly. There were no disagreements. 47 runs finished with nothing unsolved and matched the brute force exactly. In 19 more, everything the brute force found but the program didn't report lies in one of the program's unsolved families. The remaining 42 took over 30 seconds and were not checked.
+
+**Limitation:** some classes are much harder than the unfiltered problem. In base 10 with m = 7, for example, very few families can be ruled out early, so the search grows to tens of thousands of open families and can take a very long time.
+
+As with the C program, results go to `data/minimal.<b>.txt` and (if any families remain) `data/unsolved.<b>.txt`, with per-iteration snapshots in `iter/`. Progress lines (`base … iteration … split … size … remain …`) are printed to standard output.
+
+From Python:
+
+```python
+from bright.minimal import compute_base
+primes, unsolved = compute_base(10, log=None, write_files=False)
+```
+
+## How the translation was checked
+
+The original `minimal.c` was compiled and run next to the Python version. For every base from 2 to 20, these outputs are byte-for-byte identical:
+
+* the progress output,
+* every per-iteration file in `iter/`, and
+* the final `data/minimal.<b>.txt` and `data/unsolved.<b>.txt`.
+
+Identical iteration files mean the Python takes the same path through the search as the C, not just the same final answer.
+
+Against `data-minimal-sets/`, the Python output never contains a prime that isn't in the reference set. Every reference prime it doesn't output lies in one of the reported unsolved families; in the C pipeline those are found later by `simple`/`search`.
+
+### Speed
+
+Profiling showed most of the time going to string work, not big-number arithmetic: testing whether a candidate contains an already-found prime as a subsequence, and building test numbers inside the divisibility checks. Both now run largely inside Python's C-implemented string and regular-expression routines. Timings without gmpy2:
+
+| Base | C | Python |
+|---|---|---|
+| 16 | 0.8 s | 1.7 s |
+| 17 | 6.8 s | 11.6 s |
+| 19 | 42 s | 68 s |
+| 20 | 1.3 s | 3.1 s |
+
+gmpy2 matters more in higher bases, where the primes being tested run to hundreds of digits.
+
+The follow-up programs were also checked against their C versions on the unsolved families of bases 2–20: `simple` (lengths 1–400), `organize`, `sieve-start` (lengths 400–1500), sieving to p = 10⁶ with `merge`, and `search` (lengths 400–1000). Every data file came out identical. After `simple` and `organize`, 14 of the 19 bases are complete and match `data-minimal-sets` exactly.
+
+GitHub Actions (`.github/workflows/tests.yml`) runs the tests and a complete base-20 run on Windows and Linux, with and without gmpy2.
+
+Run the tests with:
+
+```sh
+python -m unittest discover tests
+```
+
+## Notes on the original C code
+
+* **It gives wrong results on current Linux.** `minimal.c` builds strings with `sprintf(str, "%s%c", str, c)`, which reads and writes the same buffer. glibc 2.37 and later no longer appends in this case; it overwrites. Compiled as-is on a modern system, the program finds only 6 of the 8 base-5 minimal primes and then loops forever. The Python version uses the intended "append" behaviour. To rebuild the C for comparison, route `sprintf` through a temporary buffer.
+* **Resuming reads from a closed file.** `minimal resume b i` reads the unsolved families through the kernel file handle it has just closed. This is undefined behaviour. It currently works only because glibc reuses the closed handle's memory for the next file opened. The Python version reads `iter/unsolved-base<b>-iter<i>.txt` directly. A resumed run gives the same results as a full run (checked on base 13 from iteration 5).
+* **`simple.c` has the same sprintf problem** when it builds candidates, so on current Linux it tests the wrong numbers.
+* **Primality testing.** The C code uses GMP's `mpz_probab_prime_p(n, 25)`. Without `gmpy2`, the Python uses a Baillie–PSW test (deterministic Miller–Rabin below 3.3·10²⁴). No Baillie–PSW pseudoprime is known.
