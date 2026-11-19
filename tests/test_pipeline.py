@@ -70,6 +70,19 @@ class PipelineTest(unittest.TestCase):
         self.assertEqual(read_lines(os.path.join(self.data, "sieve.10.txt")), expected)
         self.assertEqual(read_lines(os.path.join(self.sieve, "sieve.10.txt")), expected)
 
+    def test_merge_accepts_srsieve_dropping_k_equal_1(self):
+        # srsieve rewrites the family 1* (base 10) as 10^n-1, without "1*"
+        os.makedirs(self.data)
+        os.makedirs(self.sieve)
+        with open(os.path.join(self.data, "sieve.10.txt"), "w") as fh:
+            fh.write("pmin=31\n1*10^n-1\n23\n25\n29\n")
+        with open(os.path.join(self.sieve, "sieve.10.txt"), "w") as fh:
+            fh.write("pmin=124\n10^n-1\n23\n29\n")
+        merge(self.data, self.sieve)
+        expected = ["pmin=124", "1*10^n-1", "23", "29"]
+        self.assertEqual(read_lines(os.path.join(self.data, "sieve.10.txt")), expected)
+        self.assertEqual(read_lines(os.path.join(self.sieve, "sieve.10.txt")), expected)
+
 
 class SievingTest(unittest.TestCase):
     def test_family_line(self):
