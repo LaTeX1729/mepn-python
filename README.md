@@ -48,10 +48,10 @@ All commands run from the folder where `data/` should be kept:
 
 ```sh
 python -m bright minimal 2 20            # 1. minimal primes + unsolved families
-python -m bright simple 1 1000           # 2. test families at lengths 1..1000
+python -m bright simple 1 1000           # 2. test families at lengths 1..1000 (stops early once none are left)
 python -m bright organize                # 3. sort lists, drop redundant entries
 python -m bright sieve-start 1000 20000  # 4. sieve files for lengths 1000..20000
-python -m bright sieve 17 --pmax 1e9     # 5. sieve base 17 with srsieve (optional, speeds up 6)
+python -m bright sieve 17 --pmax 1e9     # 5. sieve base 17 with srsieve (optional, speeds up 6; one base at a time)
 python -m bright search 1000 20000       # 6. test what is left (LLR if available)
 python -m bright organize                # 7. tidy up again
 ```
@@ -68,7 +68,11 @@ python -m bright search 100 1000
 python -m bright organize      # data/minimal.20.txt now holds all 651 minimal primes
 ```
 
-Some bases have minimal primes with tens of thousands of digits (base 13's largest is 8 0^32017 111). Those need long sieving and searching, which is where srsieve and LLR pay off.
+### How long can the primes get?
+
+Some bases have minimal primes with tens of thousands of digits (base 13's largest is 8 0^32017 111), and the reference sets in `data-minimal-sets` go much further: the largest in base 17 has 111,334 digits, in base 21 479,150 and in base 23 800,874. Those need long sieving and searching, which is where srsieve and LLR pay off.
+
+In general, the first prime in a simple family can be very long, or there may be none at all, and nothing in the algorithm bounds its length in advance. The family 1 0* 1 in base 10, the numbers 10^k + 1, shows how hard this can be. Such a number can be prime only when k is a power of 2. Only two primes of this form are known, 11 and 101; 10^(2^n) + 1 is known to be composite for n = 2 to 13 (OEIS A102050 lists a prime factor of each), and whether any further prime exists is an open question. (In the unfiltered base-10 run this family is settled at once, because each member contains 11. With `--class`, such families can remain open.) This is why a family can stay in `data/unsolved.<b>.txt` after `simple`, and why `search` has no natural end.
 
 ### srsieve
 
@@ -121,6 +125,8 @@ This is an extension, not part of Bright's original program. Two changes keep th
 
 * **Adding primes:** a prime joins the set only if it is in the class.
 * **Ruling out families:** a family is discarded when none of its members can be in the class. The program tracks which remainders mod m the family's members can reach, the same technique the original uses mod 30.
+
+`sieve-start` also applies the class: exponents whose member is outside the class are dropped, and a family with nothing left in the range is left out of the sieve file (it stays in `data/unsolved.<b>.<a>mod<m>.txt`).
 
 When gcd(a, m) > 1, every member of the class is divisible by gcd(a, m). The answer is then at most one prime (a itself, or m when a = 0), and it is given directly.
 
