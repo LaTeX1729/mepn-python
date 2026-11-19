@@ -101,11 +101,19 @@ def parse_sieve(lines):
     """Sieve file lines -> (header, [(family, [exponents])])."""
     header, blocks = (lines[0] if lines else "pmin=31"), []
     for line in lines[1:]:
-        if "*" in line:
-            blocks.append((line, []))
-        elif blocks:
-            blocks[-1][1].append(int(line))
+        if line.strip().isdigit():
+            if blocks:
+                blocks[-1][1].append(int(line))
+        else:
+            blocks.append((normalize_family(line), []))
     return header, blocks
+
+
+def normalize_family(line):
+    """srsieve writes 1*b^n+c as b^n+c; put the "1*" back so the family
+    matches the line made by sieve-start (e.g. for the family 1* in base 10)."""
+    line = line.strip()
+    return line if "*" in line else "1*" + line
 
 
 def format_sieve(header, blocks):
