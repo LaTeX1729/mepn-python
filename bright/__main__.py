@@ -4,7 +4,8 @@
     python -m bright simple N M                  test unsolved families at lengths N..M
     python -m bright organize                    sort lists, drop redundant entries
     python -m bright sieve-start N M             make sieve files for lengths N..M
-    python -m bright sieve B [--pmax P]          run srsieve on base B
+    python -m bright sieve B [--class a m] [--pmax P]
+                                                 run srsieve on base B
     python -m bright merge                       merge sieve and search progress
     python -m bright search N M [B [I]]          test sieved candidates (LLR if found)
 
@@ -17,6 +18,9 @@ A typical run:
     python -m bright sieve 17 --pmax 1e9
     python -m bright search 1000 20000
     python -m bright organize
+
+For a residue class, add --class a m to minimal and to sieve; the other
+commands pick up the tagged files in data/ by themselves.
 """
 
 import sys
