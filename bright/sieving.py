@@ -91,8 +91,13 @@ def start_sieve(n, m, datadir="data", sievedir=SIEVE_DIR):
         lines = ["pmin=%d" % pmin_for(base)]
         for fam in families:
             start, middle, end = parse_simple(fam)
+            exps = surviving_exponents(base, start, middle, end, n, m, tag)
+            if not exps:
+                # Nothing to test in [n, m]; srsieve rejects a family with
+                # no terms, so leave it out (it stays in unsolved).
+                continue
             lines.append(family_line(base, start, middle, end))
-            lines.extend(str(e) for e in surviving_exponents(base, start, middle, end, n, m, tag))
+            lines.extend(str(e) for e in exps)
         write_lines(file_for("sieve", base, tag, sievedir), lines)
         write_lines(file_for("sieve", base, tag, datadir), lines)
 
@@ -119,6 +124,8 @@ def normalize_family(line):
 def format_sieve(header, blocks):
     out = [header]
     for fam, exps in blocks:
+        if not exps:
+            continue  # srsieve cannot read a family with no terms
         out.append(fam)
         out.extend(str(e) for e in exps)
     return out
@@ -197,7 +204,12 @@ def run_sieve(base, tag="", pmax=None, srsieve=None, growth=4, datadir="data",
     if not os.path.exists(work):
         src = file_for("sieve", base, tag, datadir)
         if not os.path.exists(src):
-            print("No sieve file for base %d!" % base, file=out)
+            print("No sieve file for base %d%s!" % (base, tag), file=out)
+            others = [t for _, b, t in data_files("sieve", datadir) if b == base and t != tag]
+            if others:
+                print("Found sieve files for base %d with: %s" % (base, ", ".join(
+                    "--class %d %d" % class_of(t) if t else "no --class" for t in others)),
+                    file=out)
             return 1
         write_lines(work, read_lines(src))
     try:
@@ -205,6 +217,9 @@ def run_sieve(base, tag="", pmax=None, srsieve=None, growth=4, datadir="data",
             header = read_lines(work)[:1]
             current = int(header[0].split("=")[1]) if header and header[0].startswith("pmin=") else 31
             if pmax is not None and current >= pmax:
+                break
+            if not any(exps for _, exps in parse_sieve(read_lines(work))[1]):
+                print("No terms left to sieve for base %d" % base, file=out)
                 break
             target = current * growth if pmax is None else min(current * growth, pmax)
             print("sieving base %d from p = %d to %d" % (base, current, target), file=out, flush=True)

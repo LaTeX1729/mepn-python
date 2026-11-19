@@ -99,11 +99,23 @@ Without LLR, the built-in test is used. It is fine for numbers with a few thousa
 `--class a m` restricts the search to primes p ≡ a (mod m). The program then computes the minimal elements of that set: the primes in the class that contain no smaller prime from the class as a subsequence of their digits.
 
 ```sh
-python -m bright.minimal 10 --class 1 4    # base 10, primes = 1 mod 4
-python -m bright.minimal 2 16 --class 2 3  # bases 2-16, primes = 2 mod 3
+python -m bright minimal 10 --class 1 4   # base 10, primes = 1 mod 4
+python -m bright minimal 2 16 --class 2 3  # bases 2-16, primes = 2 mod 3
 ```
 
 Results go to files tagged with the class, e.g. `data/minimal.10.1mod4.txt` and `iter/minimal-base10.1mod4-iter3.txt`, so they don't overwrite unfiltered runs.
+
+The rest of the pipeline works the same way. `simple`, `organize`, `sieve-start` and `search` handle every file in `data/`, tagged or not, so they need no extra option. Only `sieve` needs `--class` again, because it works on one base and class at a time:
+
+```sh
+python -m bright minimal 30 --class 3 4
+python -m bright simple 1 100
+python -m bright organize
+python -m bright sieve-start 100 1000
+python -m bright sieve 30 --class 3 4 --pmax 1e6
+python -m bright search 100 1000
+python -m bright organize      # results in data/minimal.30.3mod4.txt
+```
 
 This is an extension, not part of Bright's original program. Two changes keep the algorithm correct:
 

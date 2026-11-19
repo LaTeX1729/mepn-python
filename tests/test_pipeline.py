@@ -84,6 +84,18 @@ class PipelineTest(unittest.TestCase):
         self.assertEqual(read_lines(os.path.join(self.sieve, "sieve.10.txt")), expected)
 
 
+    def test_sieve_start_leaves_out_families_with_no_terms(self):
+        # In base 30, every member of A*1 and C*D is 1 mod 4, so with
+        # --class 3 4 they have nothing to sieve; srsieve rejects such a family.
+        os.makedirs(self.data)
+        with open(os.path.join(self.data, "unsolved.30.3mod4.txt"), "w") as fh:
+            fh.write("A*1\nB0*7\nC*D\n")
+        start_sieve(100, 200, datadir=self.data, sievedir=self.sieve)
+        header, blocks = parse_sieve(read_lines(os.path.join(self.data, "sieve.30.3mod4.txt")))
+        self.assertEqual([f for f, _ in blocks], ["330*30^n+7"])
+        self.assertTrue(blocks[0][1])
+
+
 class SievingTest(unittest.TestCase):
     def test_family_line(self):
         self.assertEqual(family_line(10, "6", "0", "49"), "600*10^n+49")
