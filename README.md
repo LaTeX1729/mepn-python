@@ -109,17 +109,23 @@ python -m bright minimal 2 16 --class 2 3  # bases 2-16, primes = 2 mod 3
 
 Results go to files tagged with the class, e.g. `data/minimal.10.1mod4.txt` and `iter/minimal-base10.1mod4-iter3.txt`, so they don't overwrite unfiltered runs.
 
-The rest of the pipeline works the same way. `simple`, `organize`, `sieve-start` and `search` handle every file in `data/`, tagged or not, so they need no extra option. Only `sieve` needs `--class` again, because it works on one base and class at a time:
+The rest of the pipeline works the same way. `simple`, `organize`, `sieve-start` and `search` handle every file in `data/`, tagged or not, so they need no extra option. Only `sieve` needs `--class` again, because it works on one base and class at a time.
+
+For example, base 16 with primes = 3 mod 4 runs completely in about 10 seconds:
 
 ```sh
-python -m bright minimal 30 --class 3 4
+python -m bright minimal 16 --class 3 4
 python -m bright simple 1 100
-python -m bright organize
-python -m bright sieve-start 100 1000
-python -m bright sieve 30 --class 3 4 --pmax 1e6
-python -m bright search 100 1000
-python -m bright organize      # results in data/minimal.30.3mod4.txt
+python -m bright organize       # 8 families left, e.g. F8*F
+python -m bright sieve-start 100 2000
+python -m bright sieve 16 --class 3 4 --pmax 1e6
+python -m bright search 100 2000
+python -m bright organize       # data/minimal.16.3mod4.txt now holds all 359 minimal primes
 ```
+
+The last family to fall is F8*F, whose first prime in the class is F 8^1517 F, with 1,519 digits. The result was checked independently: all 359 numbers are probable primes ≡ 3 (mod 4), none contains another as a subsequence, and every prime ≡ 3 (mod 4) below 16⁶ contains one of them.
+
+Other bases and classes follow the same pattern, e.g. `minimal 30 --class 3 4` and `sieve 30 --class 3 4`, but may need much longer ranges in `sieve-start` and `search`.
 
 This is an extension, not part of Bright's original program. Two changes keep the algorithm correct:
 
