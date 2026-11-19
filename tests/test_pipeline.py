@@ -48,6 +48,18 @@ class PipelineTest(unittest.TestCase):
                                  sorted(reference(b), key=lambda s: (len(s), s)))
                 self.assertEqual(read_lines(os.path.join(self.data, "unsolved.%d.txt" % b)), [])
 
+    def test_simple_stops_when_nothing_is_left(self):
+        os.makedirs(self.data)
+        with open(os.path.join(self.data, "unsolved.10.txt"), "w") as fh:
+            fh.write("1*\n")
+        out = io.StringIO()
+        run_simple(1, 1000, datadir=self.data, out=out)
+        lines = out.getvalue().splitlines()
+        self.assertIn("1^(2) (base 10) probably prime", lines)
+        self.assertEqual(lines[-2], "FINISHED LEVEL 2, COUNT REMAINING 0, TIME %s"
+                         % lines[-2].split("TIME ")[1])
+        self.assertEqual(lines[-1], "No unsolved families left; stopping")
+
     def test_sieve_and_search_complete_base_10(self):
         self.minimal([10])
         start_sieve(1, 30, datadir=self.data, sievedir=self.sieve)

@@ -77,6 +77,9 @@ def run_simple(n, m, datadir="data", out=sys.stdout):
             write_lines(path, remaining)
         print("FINISHED LEVEL %d, COUNT REMAINING %d, TIME %f"
               % (num, count, time.process_time() - begin), file=out, flush=True)
+        if count == 0:
+            print("No unsolved families left; stopping", file=out, flush=True)
+            break
 
 
 def main(argv=None):
