@@ -742,7 +742,7 @@ class BrightMinimal:
                             unsolved.append((f, sp))
                     unsolved = self.removedupes(unsolved)
                 splititer += 1
-                self._say("base %d\titeration %d\tsplit %d\tsize %d\tremain %d"
+                self._say("base %-2d  iteration %-3d  split %-3d  size %-7d  remain %d"
                           % (B, self.iter, splititer, len(self.K), len(unsolved)))
 
             old, unsolved = unsolved, []
