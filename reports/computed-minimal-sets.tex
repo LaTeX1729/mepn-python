@@ -1,0 +1,107 @@
+\documentclass[11pt]{article}
+\usepackage[T1]{fontenc}
+\usepackage{amsmath,amssymb,amsthm}
+\usepackage{fourier}
+\usepackage{booktabs}
+\usepackage{enumitem}
+\usepackage[margin=1in]{geometry}
+\usepackage[hidelinks]{hyperref}
+
+\newcommand{\code}[1]{\texttt{#1}}
+\setlength{\emergencystretch}{3em}
+
+\title{Computed minimal sets for residue classes}
+\author{}  % add author
+\date{19 November 2026, 20:41 MST (UTC$-$07:00)}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+This report records seven minimal sets of primes in residue classes, computed with \code{mepn-python} and stored in \code{data-computed/}. All seven are complete: no families remain open. Each was checked independently of the program. The report gives, for each set, its size, its longest element, how far \code{simple} and \code{search} went, and how it was computed. It ends with the limits on what can be computed in the environment used.
+\end{abstract}
+
+\section{Results}
+
+For a base $b$ and a class $a \bmod m$ with $\gcd(a,m)=1$, the set is the set of minimal elements, under the subsequence order, of the base-$b$ representations of the primes $p\equiv a \pmod m$ (see \code{bright-algorithm.tex}, Section~10). Each set is stored in the folder \code{data-computed/} as
+\[
+  \code{minimal.}b\code{.}a\code{mod}m\code{.txt}.
+\]
+
+\begin{table}[h]
+\centering
+\begin{tabular}{@{}rcrrlcc@{}}
+\toprule
+Base & Class & Primes & Digits & Longest element & \code{simple} & \code{search}\\
+\midrule
+10 & 1 mod 4 & 146 & 79    & $8^{77}3^2$          & 1--77  & --- \\
+10 & 2 mod 3 & 251 & 66    & $7^{65}9$            & 1--65  & --- \\
+12 & 1 mod 3 & 40  & 8     & $\mathrm{A}^2 0^5 1$ & 1--5   & --- \\
+12 & 1 mod 4 & 52  & 8     & $\mathrm{A}^2 0^5 1$ & 1--5   & --- \\
+12 & 3 mod 4 & 3   & 1     & $\{3,7,\mathrm{B}\}$  & ---    & --- \\
+16 & 3 mod 4 & 359 & 1{,}519 & $\mathrm{F}\,8^{1517}\mathrm{F}$ & 1--100 & 100--1517 \\
+20 & 3 mod 4 & 4   & 1     & $\{3,7,\mathrm{B},\mathrm{J}\}$ & --- & --- \\
+\bottomrule
+\end{tabular}
+\caption{The computed sets. \emph{Digits} is the length of the longest element. The last two columns give the repeat counts $n$ tested in families $x\,y^n z$; a dash means the program was not needed.}
+\end{table}
+
+\paragraph{Search lengths.} \code{simple} stops as soon as no families remain, so its range ends at the length where the last family was solved; for instance, base 10, 1 mod 4 ends with $8^{77}3^2$ at length 77. Likewise \code{search} ends at the exponent of the last family's prime. In base 16, 3 mod 4, eight families were left after \code{simple 1 100}, and \code{search} settled the last one with $\mathrm{F}\,8^{1517}\mathrm{F}$. For an incomplete set these columns would give a lower bound: every remaining minimal element would have more repeated digits than the last length tested.
+
+\paragraph{One-digit sets.} In bases 12 and 20 the base is $\equiv 0 \pmod 4$, so the last digit fixes the residue mod 4. Every digit $\equiv 3 \pmod 4$ that is coprime to the base is itself prime (3, 7, 11, and in base 20 also 19). A number ending in a digit that is not coprime to the base is divisible by a prime factor of the base. So the minimal sets for 3 mod 4 consist only of these one-digit primes.
+
+\section{Method}
+
+Each set was computed in its own empty folder with the commands
+\begin{verbatim}
+python -m bright minimal B --class a m
+python -m bright simple 1 100
+python -m bright organize
+\end{verbatim}
+and, where families remained,
+\begin{verbatim}
+python -m bright sieve-start 100 2000
+python -m bright sieve B --class a m --pmax 1e6
+python -m bright search 100 2000
+python -m bright organize
+\end{verbatim}
+
+\begin{center}
+\begin{tabular}{@{}ll@{}}
+\toprule
+Code & \code{mepn-python}, commit \code{32518ac} \\
+Python & 3.13.18 \\
+Primality test & built-in Baillie--PSW (no gmpy2, no LLR) \\
+Sieve & srsieve 0.6.17 (bundled Linux executable) \\
+Date & 19 November 2026 \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+All seven runs together took under 15 seconds. Base 16, 3 mod 4 took the longest, at 7 seconds.
+
+\section{Verification}
+
+Each set was checked by a separate script that does not use the program's search:
+\begin{enumerate}[label=(\arabic*)]
+\item every element is a probable prime and lies in the class;
+\item no element is a subsequence of another, so the set is an antichain;
+\item every prime $p < 2\cdot 10^7$ with $p\equiv a\pmod m$ contains some element as a subsequence (brute force over all such primes).
+\end{enumerate}
+All seven sets passed. Checks (1) and (2) are complete. Check (3) shows the set is correct for primes below $2\cdot10^7$; correctness beyond that rests on the algorithm's cover invariant (\code{bright-algorithm.tex}, Section~1).
+
+\paragraph{Comparison with the literature.} Bright, Devillers and Shallit report that the minimal set for primes of the form $4n+1$ in base 10 has 146 elements, the largest with 79 digits. The computed set agrees on both counts.
+
+\paragraph{Probable primes.} The elements are probable primes. The set is correct provided none of them is a pseudoprime; no Baillie--PSW pseudoprime is known. The longest element, $\mathrm{F}\,8^{1517}\mathrm{F}$ in base 16, has 1{,}519 digits.
+
+\section{Limits of the computing environment}
+
+These sets were computed in the cloud workspace used for this project, not on the author's machine. That environment limits what can be done there:
+\begin{itemize}
+\item \textbf{Time.} A single command can run for about 10 minutes, and background jobs stop soon after a session goes idle. Long \code{minimal} runs can be split, since they resume from their iteration files, but searches lasting days cannot be run.
+\item \textbf{Primality testing.} Neither gmpy2 nor LLR is available, and packages cannot be installed. The built-in test is practical for numbers of a few thousand digits; the tens of thousands of digits needed in some bases are out of reach.
+\item \textbf{Hard classes.} Some classes, such as base 10 modulo 7, produce tens of thousands of open families and take far too long. Base 30, 3 mod 4 did not finish \code{minimal} within 9 minutes.
+\end{itemize}
+Small and medium bases with moduli such as 3, 4, 6 and 8 are feasible there. Heavier cases should be run on a machine with gmpy2 and LLR; \code{simple - M} and \code{search -} let those runs continue across sessions, and their results can be added to \code{data-computed/} with the same table entries.
+
+\end{document}
