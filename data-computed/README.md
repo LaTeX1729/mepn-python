@@ -2,11 +2,11 @@
 
 Minimal sets computed with this repository's code that are not in `data-minimal-sets/`. That folder stays exactly as published, as the reference for the tests. File names follow `data/`: `minimal.<b>.<a>mod<m>.txt` holds the minimal primes of base b that are ≡ a (mod m). A set that is not complete also has an `unsolved.<b>.<a>mod<m>.txt` file listing its open families.
 
-All 103 sets below are **complete**: no families remain open.
+All 104 sets below are **complete**: no families remain open.
 
 ## Coverage
 
-The project computes the classes modulo 2, 3, 4, 6 and 8 with gcd(a, m) = 1 in the bases with at most two terminal digits: 2, 3, 4, 5, 6, 8, 10, 12, 14, 18, 20, 24, 30, 42 and 60 (see `reports/terminal-digits.tex`). That is 165 sets, of which 102 are complete here. Base 16, 3 mod 4 is the worked example from the main README. The status of the remaining 63 sets is in `reports/class-minimal-sets.tex`.
+The project computes the classes modulo 2, 3, 4, 6 and 8 with gcd(a, m) = 1 in the bases with at most two terminal digits: 2, 3, 4, 5, 6, 8, 10, 12, 14, 18, 20, 24, 30, 42 and 60 (see `reports/terminal-digits.tex`). That is 165 sets, of which 103 are complete here. Base 16, 3 mod 4 is the worked example from the main README. The status of the remaining 62 sets is in `reports/class-minimal-sets.tex`.
 
 ## Unrestricted sets
 
@@ -109,6 +109,7 @@ Base 60 has two possible terminal digits, 1 and 49 (`n`), since every other unit
 | 20 | 1 mod 2 | 917 | 449 | 1–300 | 300–447 | 5f7a5a5 |
 | 20 | 1 mod 4 | 1,380 | 1,587 | 1–300 | 300–1585 | 5f7a5a5 |
 | 20 | 3 mod 4 | 4 | 1 | not needed | — | 5f7a5a5 |
+| 20 | 7 mod 8 | 10,627 | 6,421 | 1–300 | 300–6418 | cb4b7dc |
 | 24 | 1 mod 2 | 360 | 100 | 1–98 | — | 5f7a5a5 |
 | 24 | 1 mod 3 | 811 | 100 | 1–98 | — | 5f7a5a5 |
 | 24 | 2 mod 3 | 5 | 1 | not needed | — | 5f7a5a5 |
@@ -147,3 +148,5 @@ The base-10, 1 mod 4 set (146 primes, the longest with 79 digits) also agrees wi
 * 5 mod 6 is 2 mod 3 without the prime 2: it drops 2 and gains the primes that 2 used to rule out (in base 10, for example, 2087 and 20021).
 * 1 mod 2 is the set for the odd primes, which is the published set with 2 removed plus the odd primes that 2 used to rule out.
 * In bases 12 and 20, 3 mod 4, the sets are just the one-digit primes in the class. Since the base is ≡ 0 (mod 4), the last digit alone fixes the residue mod 4. Every digit ≡ 3 (mod 4) that is coprime to the base is itself prime (3, 7, 11, and 19 in base 20), and in base 20 a number ending in 15 is divisible by 5.
+
+**Independent checks of the largest primes.** The largest new primes were tested twice: with GMP's `mpz_probab_prime_p` (Baillie–PSW plus 24 Miller–Rabin rounds) and with the program's own pure-Python Baillie–PSW test, which shares no code with GMP. Both accept 8^7733 77 in base 12 (8,348 decimal digits, 3 mod 8) and 2^19151 99 in base 10 (19,153 digits, 3 mod 4; 28 minutes with the Python test).
