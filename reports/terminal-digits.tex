@@ -1,0 +1,158 @@
+\documentclass[11pt]{article}
+\usepackage[T1]{fontenc}
+\usepackage{amsmath,amssymb,amsthm}
+\usepackage{fourier}
+\usepackage{booktabs}
+\usepackage[margin=1in]{geometry}
+\usepackage{hyperref}
+
+\newtheorem{theorem}{Theorem}
+\newtheorem{lemma}[theorem]{Lemma}
+\newtheorem{proposition}[theorem]{Proposition}
+\newtheorem{corollary}[theorem]{Corollary}
+\theoremstyle{remark}
+\newtheorem{remark}[theorem]{Remark}
+
+\newcommand{\Z}{\mathbb{Z}}
+\newcommand{\U}[1]{(\Z/#1\Z)^{\times}}
+
+\title{Terminal digits of minimal primes}
+\author{}  % add author
+\date{November 2026}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+In base $b$, a minimal prime with two or more digits can only end in $1$ or in a composite unit of $\Z/b\Z$ smaller than $b$. We call the number of such digits $c(b)$ and show that $c(b)=\varphi(b)-\pi(b-1)+\omega^*(b)$. For each $c$ there are only finitely many bases with $c(b)=c$, and we determine them for $c\le 8$. In particular, $30$, $60$ and $90$ are the largest bases with one, two and three terminal digits. The proposition that $b=30k$ has $k$ terminal digits holds for $k\le 3$ and fails for every $k$ from $4$ to $12$. The structure of the unit group does not determine $c(b)$.
+\end{abstract}
+
+\section{Terminal digits}
+
+Throughout, $b\ge 2$ is the base, and a \emph{minimal prime} is a prime whose base-$b$ digit string contains no shorter prime as a subsequence (Bright, Devillers and Shallit). A \emph{unit} is a digit $u\in\{1,\dots,b-1\}$ with $\gcd(u,b)=1$.
+
+\begin{lemma}\label{lem:terminal}
+Let $p$ be a minimal prime with at least two digits in base $b$, and let $d$ be its last digit. Then either $p=b$ is prime and written $10$, or $d$ is a unit that is not prime, that is, $d=1$ or $d$ is a composite unit.
+\end{lemma}
+
+\begin{proof}
+Write $p=bm+d$ with $m\ge 1$. Then $g=\gcd(d,b)$ divides $p$, so $g\in\{1,p\}$. If $g=p$, then $p\mid b$, so $p\le b$; but $p\ge b$ because it has two digits, so $p=b$, which is prime and written $10$. Otherwise $g=1$ and $d$ is a unit. If $d$ were prime, the one-digit prime $d$ would be a subsequence of $p$, contradicting minimality.
+\end{proof}
+
+So, apart from $10$ in a prime base, the terminal digits of the multi-digit minimal primes lie in
+\[
+T(b)=\{1\}\cup\{u<b:\ \gcd(u,b)=1,\ u \text{ composite}\},\qquad c(b)=|T(b)|.
+\]
+Counting the units and subtracting the prime ones gives
+\[
+c(b)=\varphi(b)-\pi(b-1)+\omega^*(b),
+\]
+where $\omega^*(b)$ is the number of prime divisors of $b$ smaller than $b$ (the primes below $b$ that are not units). For example, $c(120)=32-30+3=5$.
+
+\begin{remark}
+For every base with a reference set in the repository (bases $2$--$42$ and $50$), the terminal digits that actually occur are exactly $T(b)$, together with $0$ for prime $b$. In those bases every possible terminal digit is used.
+\end{remark}
+
+\section{Bases with few terminal digits}
+
+Let $p_1<p_2<\cdots$ be the primes that do not divide $b$, and let $P(x)$ be the product of the primes less than $x$.
+
+\begin{lemma}\label{lem:smallest}
+The smallest composite unit of $b$ is $p_1^2$. Hence if $c(b)=2$, then $T(b)=\{1,p_1^2\}$.
+\end{lemma}
+
+\begin{proof}
+Every prime factor of a composite unit is one of the $p_i$, so the unit is at least $p_1^2$, and $p_1^2$ is itself a composite unit.
+\end{proof}
+
+\begin{theorem}\label{thm:bound}
+If $c(b)\le c$, then $b<p_1p_c$ and
+\[
+P(p_c)\;<\;p_1^2\,p_2\cdots p_{c-1}\,p_c\;<\;p_c^{\,c+1}.
+\]
+\end{theorem}
+
+\begin{proof}
+The numbers $p_1^2<p_1p_2<\cdots<p_1p_c$ are $c$ distinct composite units. Since $b$ has at most $c-1$ composite units below it, the largest, $p_1p_c$, is not below $b$; it is not equal to $b$ either, since $p_1\nmid b$. So $b<p_1p_c$. Every prime below $p_c$ other than $p_1,\dots,p_{c-1}$ divides $b$, so $P(p_c)/(p_1\cdots p_{c-1})\le b<p_1p_c$, and the inequality follows.
+\end{proof}
+
+Since $P(x)$ grows like $e^{x}$, Theorem~\ref{thm:bound} bounds $p_c$ and hence $b<p_c^2$, so each family $\{b: c(b)=c\}$ is finite and can be listed by a finite search. For $c=1$ this is the classical fact that $30$ is the largest number all of whose units other than $1$ are prime.
+
+\begin{table}[h]
+\centering
+\begin{tabular}{@{}cclc@{}}
+\toprule
+$c$ & bound $p_c\le$ & bases $b$ with $c(b)=c$ & largest \\
+\midrule
+1 & 7  & 2, 3, 4, 6, 8, 12, 18, 24, 30 & 30 \\
+2 & 11 & 5, 10, 14, 20, 42, 60 & 60 \\
+3 & 17 & 7, 9, 16, 36, 48, 90 & 90 \\
+4 & 19 & 15, 22, 54, 84 & 84 \\
+5 & 29 & 26, 28, 66, 120 & 120 \\
+6 & 31 & 11, 21, 32, 40, 72, 78, 210 & 210 \\
+7 & 41 & 13, 34, 50 & 50 \\
+8 & 43 & 38, 44, 70, 150 & 150 \\
+\bottomrule
+\end{tabular}
+\caption{The complete families for $c\le 8$. The bound on $p_c$ is the largest prime with $P(p_c)\le p_c^{c+1}$; every base up to $p_c^2$ was checked.}
+\end{table}
+
+The sequence of largest elements begins $30,60,90$ but continues $84,120,210,50,150$, so it is not $30c$.
+
+\section{Unit groups}
+
+\begin{table}[h]
+\centering
+\begin{tabular}{@{}rlc@{\qquad}rlc@{\qquad}rlc@{}}
+\toprule
+\multicolumn{3}{c}{$c(b)=1$} & \multicolumn{3}{c}{$c(b)=2$} & \multicolumn{3}{c}{$c(b)=3$}\\
+$b$ & $\U{b}$ & $T(b)$ & $b$ & $\U{b}$ & $T(b)$ & $b$ & $\U{b}$ & $T(b)$\\
+\midrule
+2  & $1$ & 1 & 5  & $C_4$ & 1, 4 & 7  & $C_6$ & 1, 4, 6\\
+3  & $C_2$ & 1 & 10 & $C_4$ & 1, 9 & 9  & $C_6$ & 1, 4, 8\\
+4  & $C_2$ & 1 & 14 & $C_6$ & 1, 9 & 16 & $C_2\times C_4$ & 1, 9, 15\\
+6  & $C_2$ & 1 & 20 & $C_2\times C_4$ & 1, 9 & 36 & $C_2\times C_6$ & 1, 25, 35\\
+8  & $C_2^2$ & 1 & 42 & $C_2\times C_6$ & 1, 25 & 48 & $C_2^2\times C_4$ & 1, 25, 35\\
+12 & $C_2^2$ & 1 & 60 & $C_2^2\times C_4$ & 1, 49 & 90 & $C_2\times C_{12}$ & 1, 49, 77\\
+18 & $C_6$ & 1 \\
+24 & $C_2^3$ & 1 \\
+30 & $C_2\times C_4$ & 1 \\
+\bottomrule
+\end{tabular}
+\caption{Unit groups and terminal digits for $c\le 3$.}
+\end{table}
+
+\begin{itemize}
+\item $\U{b}$ has exponent at most $2$ (a direct sum of copies of $C_2$) exactly when $b\mid 24$. These bases all have $c(b)=1$, but so do $18$ and $30$, whose groups $C_6$ and $C_2\times C_4$ are not of exponent $2$. What the family $c(b)=1$ shares is that every unit other than $1$ is prime.
+\item When $c(b)=2$, the extra digit $p_1^2$ is the square of the unit $p_1$ and is not $1$, so it is a nontrivial element of the subgroup of squares. Hence $\U{b}$ does not have exponent $2$, and $b\nmid 24$.
+\item The group does not determine $c(b)$: $\U{20}\cong\U{30}\cong C_2\times C_4$ with $c=2$ and $c=1$, and $C_6$ occurs for $c=1$ ($b=18$), $c=2$ ($b=14$) and $c=3$ ($b=7,9$). What decides $c(b)$ is how small the primes not dividing $b$ are compared with $b$.
+\end{itemize}
+
+\section{The bases \texorpdfstring{$30k$}{30k}}
+
+\begin{proposition}
+$c(30k)=k$ for $k=1,2,3$.
+\end{proposition}
+
+\begin{proof}
+For these $k$ the primes dividing $30k$ are $2,3,5$, so a composite unit has all its prime factors at least $7$. The composite numbers coprime to $30$ are $49,77,91,119,121,\dots$, and below $30$, $60$ and $90$ there are $0$, $1$ and $2$ of them.
+\end{proof}
+
+The statement fails for every $k$ from $4$ to $12$:
+
+\begin{center}
+\begin{tabular}{@{}lcccccccccccc@{}}
+\toprule
+$k$ & 1 & 2 & 3 & 4 & 5 & 6 & 7 & 8 & 9 & 10 & 11 & 12\\
+$c(30k)$ & 1 & 2 & 3 & 5 & 8 & 10 & 6 & 15 & 18 & 21 & 18 & 27\\
+\bottomrule
+\end{tabular}
+\end{center}
+
+At $b=120$ both $91$ and $119$ are below $b$, so $T(120)=\{1,49,77,91,119\}$. At $b=210$, $7\mid b$, so the multiples of $7$ are no longer units and $T(210)=\{1,121,143,169,187,209\}$.
+
+\section*{Computation}
+
+The families, bounds and the values of $c(30k)$ were computed in Python by direct enumeration. The family lists for $c\le 3$ were also confirmed by a search of all bases up to $10^5$, and the comparison with actual terminal digits used the reference minimal sets in \texttt{data-minimal-sets}.
+
+\end{document}
