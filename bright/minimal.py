@@ -317,127 +317,85 @@ class BrightMinimal:
             s = join(parts)
             return parse(s) if s else 0
 
-        empty = inst()
-        g = empty
-        numrepeats = 0
-        for i in range(L):
-            for j in range(nr[i]):
-                g = gcd(g, inst((i, j)))
-            if nr[i] > 0:
-                numrepeats += 1
+        def gcd_all(g, values):
+            # gcd over values, stopping once it is 1: every test below only
+            # asks whether a gcd is > 1 (and < empty), and a gcd of 1 stays 1,
+            # so the decisions are exactly those of the full loops in the C
+            # code, which this replaces.
+            for v in values:
+                g = gcd(g, v)
+                if g == 1:
+                    return 1
+            return g
 
+        empty = inst()
+        rep_nodes = [i for i in range(L) if nr[i] > 0]
+        numrepeats = len(rep_nodes)
         if numrepeats == 0:
             return False
 
         # One divisor for the whole family.
+        g = gcd_all(empty, (inst((i, j)) for i in range(L) for j in range(nr[i])))
         if g > 1 and empty > g:
             return True
 
         # Two divisors: split by whether the repeats at node m are used an
         # even or odd number of times.
-        for m in range(L):
-            if nr[m] == 0:
+        for m in rep_nodes:
+            gcd1 = gcd_all(empty, (inst((i, j)) for i in range(L) if i != m
+                                   for j in range(nr[i])))
+            gcd1 = gcd_all(gcd1, (inst((m, i), (m, j))
+                                  for i in range(nr[m]) for j in range(nr[m])))
+            if not (gcd1 > 1 and empty > gcd1):
                 continue
-            gcd1 = empty
-            for i in range(L):
-                if i == m:
-                    continue
-                for j in range(nr[i]):
-                    gcd1 = gcd(gcd1, inst((i, j)))
-            for i in range(nr[m]):
-                for j in range(nr[m]):
-                    gcd1 = gcd(gcd1, inst((m, i), (m, j)))
-
-            gcd2 = None
+            gcd2 = 0
             for n in range(nr[m]):
-                t = inst((m, n))
-                gcd2 = t if gcd2 is None else gcd(gcd2, t)
-                for i in range(L):
-                    if i == m:
-                        continue
-                    for j in range(nr[i]):
-                        gcd2 = gcd(gcd2, inst((i, j), (m, n)))
-                for i in range(nr[m]):
-                    for j in range(nr[m]):
-                        for k in range(nr[m]):
-                            gcd2 = gcd(gcd2, inst((m, i), (m, j), (m, k)))
-
-            if gcd1 > 1 and gcd2 > 1 and empty > gcd1 and empty > gcd2:
+                gcd2 = gcd_all(gcd2, [inst((m, n))])
+                gcd2 = gcd_all(gcd2, (inst((i, j), (m, n)) for i in range(L) if i != m
+                                      for j in range(nr[i])))
+                gcd2 = gcd_all(gcd2, (inst((m, i), (m, j), (m, k)) for i in range(nr[m])
+                                      for j in range(nr[m]) for k in range(nr[m])))
+                if gcd2 == 1:
+                    break
+            if gcd2 > 1 and empty > gcd2:
                 return True
 
         # gcd2: odd-count divisor at the first repeating node.
+        firstrepeat = rep_nodes[0]
+        fr = firstrepeat
         gcd2 = 0
-        gcdbeenset = False
-        i = 0
-        while i < L:
-            for j in range(nr[i]):
-                t = inst((i, j))
-                if gcdbeenset:
-                    gcd2 = gcd(gcd2, t)
-                else:
-                    gcdbeenset = True
-                    gcd2 = t
-                for k in range(L):
-                    for l in range(nr[k]):
-                        for n in range(nr[k]):
-                            gcd2 = gcd(gcd2, inst((i, j), (k, l), (k, n)))
-            if nr[i] > 0:
+        for j in range(nr[fr]):
+            gcd2 = gcd_all(gcd2, [inst((fr, j))])
+            gcd2 = gcd_all(gcd2, (inst((fr, j), (k, l), (k, n)) for k in range(L)
+                                  for l in range(nr[k]) for n in range(nr[k])))
+            if gcd2 == 1:
                 break
-            i += 1
-        firstrepeat = i
 
         if numrepeats == 2:
-            gcd1 = empty
-            for i in range(L):
-                for j in range(nr[i]):
-                    for l in range(nr[i]):
-                        gcd1 = gcd(gcd1, inst((i, j), (i, l)))
-
-            temp2 = 0
-            gcdbeenset = False
-            i = firstrepeat + 1
-            while i < L:
-                for j in range(nr[i]):
-                    t = inst((i, j))
-                    if gcdbeenset:
-                        temp2 = gcd(temp2, t)
-                    else:
-                        gcdbeenset = True
-                        temp2 = t
-                    for k in range(L):
-                        for l in range(nr[k]):
-                            for n in range(nr[k]):
-                                temp2 = gcd(temp2, inst((i, j), (k, l), (k, n)))
-                if nr[i] > 0:
-                    break
-                i += 1
-            secondrepeat = i
-
-            fr, sr = firstrepeat, secondrepeat
-            temp3 = 0
-            gcdbeenset = False
-            for j in range(nr[fr]):
-                for l in range(nr[sr]):
-                    t = inst((fr, j), (sr, l))
-                    if gcdbeenset:
-                        temp3 = gcd(temp3, t)
-                    else:
-                        gcdbeenset = True
-                        temp3 = t
-            for a in range(nr[fr]):
-                for b in range(nr[fr]):
-                    for c in range(nr[fr]):
-                        for d in range(nr[sr]):
-                            temp3 = gcd(temp3, inst((fr, a), (fr, b), (fr, c), (sr, d)))
-            for a in range(nr[fr]):
-                for b in range(nr[sr]):
-                    for c in range(nr[sr]):
-                        for d in range(nr[sr]):
-                            temp3 = gcd(temp3, inst((fr, a), (sr, b), (sr, c), (sr, d)))
-
-            if (gcd1 > 1 and gcd2 > 1 and empty > gcd1 and empty > gcd2
-                    and temp2 > 1 and temp3 > 1 and empty > temp2 and empty > temp3):
-                return True
+            sr = rep_nodes[1]
+            gcd1 = gcd_all(empty, (inst((i, j), (i, l)) for i in range(L)
+                                   for j in range(nr[i]) for l in range(nr[i])))
+            ok = gcd1 > 1 and empty > gcd1 and gcd2 > 1 and empty > gcd2
+            if ok:
+                temp2 = 0
+                for j in range(nr[sr]):
+                    temp2 = gcd_all(temp2, [inst((sr, j))])
+                    temp2 = gcd_all(temp2, (inst((sr, j), (k, l), (k, n)) for k in range(L)
+                                            for l in range(nr[k]) for n in range(nr[k])))
+                    if temp2 == 1:
+                        break
+                ok = temp2 > 1 and empty > temp2
+            if ok:
+                temp3 = gcd_all(0, (inst((fr, j), (sr, l))
+                                    for j in range(nr[fr]) for l in range(nr[sr])))
+                temp3 = gcd_all(temp3, (inst((fr, a), (fr, b), (fr, c), (sr, d))
+                                        for a in range(nr[fr]) for b in range(nr[fr])
+                                        for c in range(nr[fr]) for d in range(nr[sr])))
+                temp3 = gcd_all(temp3, (inst((fr, a), (sr, b), (sr, c), (sr, d))
+                                        for a in range(nr[fr]) for b in range(nr[sr])
+                                        for c in range(nr[sr]) for d in range(nr[sr])))
+                if temp3 > 1 and empty > temp3:
+                    return True
 
         if numrepeats == 1:
             for i in range(L):
