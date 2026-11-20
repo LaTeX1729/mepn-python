@@ -66,6 +66,57 @@ python -m bright organize                # 8. tidy up again
 
 `simple` records the last length it finished for each unsolved file in `data/simple.<b>.txt` (e.g. `data/simple.10.3mod4.txt`), so `python -m bright simple - M` carries on from there up to M. Only an unbroken run of lengths from 1 counts, so if you skip lengths the record stays at the last one before the gap. `minimal` deletes the record when it writes a new unsolved list. `search` needs no such record: it removes each exponent it has tested from `data/sieve.<b>.txt`, and `python -m bright search -` carries on with what is left.
 
+### Long runs: stopping and resuming
+
+Every step can be stopped and continued later, so a computation can be spread over many sessions.
+
+| Step | How to continue | What it continues from |
+|---|---|---|
+| `minimal` | `python -m bright minimal resume B I [--class a m]` | the files saved after iteration I in `iter/` |
+| `simple` | `python -m bright simple - M` | `data/simple.<b>.txt`, the last length finished |
+| `sieve` | run it again with the same base and class | the `pmin=` line in the sieve file |
+| `search` | `python -m bright search -` | the exponents still in `data/sieve.<b>.txt` |
+
+**Resuming `minimal`.** `B` is a single base and `I` the last iteration whose files were saved; the run continues with iteration I+1. If the original run used a class, give the same class (`--class a m`; the one-number form `--class m` is not accepted here). The files it reads are, for base 30 at 3 mod 4 and iteration 5,
+
+```
+iter/minimal-base30.3mod4-iter5.txt
+iter/unsolved-base30.3mod4-iter5.txt
+```
+
+and for an unrestricted run `iter/minimal-base30-iter5.txt` and so on. To find the latest iteration and resume from it:
+
+```sh
+ls iter/ | grep "unsolved-base30.3mod4" | sort -V | tail -1   # e.g. unsolved-base30.3mod4-iter5.txt
+python -m bright minimal resume 30 5 --class 3 4
+```
+
+`minimal` saves only when an iteration finishes, so an interrupted run loses at most the iteration in progress. In large bases or classes a single iteration can take hours, so stopping a run just before an iteration ends is costly. When it finishes, a resumed run writes `data/` exactly as a full run would, and the pipeline continues with `simple`.
+
+**Extending a search.** When `search` has used up its range, start the next one. `sieve-start` writes a fresh sieve file for the families still open:
+
+```sh
+python -m bright sieve-start 20001 30000
+python -m bright sieve 10 --class 1 3 --pmax 1e8
+python -m bright search -
+python -m bright organize
+python -m bright covering
+```
+
+**Suggestions for long runs**
+
+* **Use one folder per base and class.** Every command works on all the files in `data/`, so separate folders keep long runs from interfering with each other, and each folder has its own `iter/` files.
+* **Keep a log.** Run long jobs with `nohup` (or inside `tmux`) and send the output to a file, so the run survives closing the terminal and shows where it got to:
+  ```sh
+  nohup python -m bright minimal resume 30 5 --class 3 4 >> run.log 2>&1 &
+  tail -f run.log
+  ```
+* **Keep the computer awake.** WSL stops when Windows sleeps or hibernates. For runs of many hours, set Windows not to sleep while plugged in.
+* **Check the primality backend** with `python -c "import bright.primality as p; print(p.BACKEND)"`. It should say `gmpy2` or `libgmp`; `pure-python` is far too slow for long searches.
+* **Use LLR for long searches** (see below): beyond a few tens of thousands of digits it is much faster than GMP for these forms.
+* **Run `covering` after `organize`.** It can remove a family that would otherwise be searched forever, and it is cheap.
+* **Back up the folder** now and then. The files are small, and they are the whole state of the computation.
+
 `python -m bright --help` lists the commands. For example, base 20 runs completely in a few seconds:
 
 ```sh
