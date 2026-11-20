@@ -209,14 +209,24 @@ class BrightMinimal:
         return is_probable_prime(n)
 
     def misses_class(self, p):
-        """True if no member of family p is congruent to residue mod modulus.
+        """True if no member of family p can be a prime in the class.
 
-        The residues reachable by members of the family are computed exactly,
-        in the same way as the mod-30 test in hasdivisor.
+        The residues reachable by members of the family are computed exactly
+        modulo L = lcm(m, 30), in the same way as the mod-30 test in
+        hasdivisor. A member can be a prime in the class only if its residue r
+        satisfies r = a (mod m) and gcd(r, 30) = 1, or is one of the primes 2, 3
+        and 5; those have at most three digits in any base, so they are
+        already in the kernel or not minimal, and discarding the family loses
+        nothing. Testing both conditions on the same
+        residues catches families where every member is either outside the
+        class or divisible by 2, 3 or 5, such as 11 0* 4* 1 in base 5 with the
+        class 3 mod 8 (odd number of 4s: divisible by 3; even: 7 mod 8),
+        which neither condition rules out on its own.
         """
         if self.modulus is None:
             return False
         m, B = self.modulus, self.base
+        m = m * 30 // gcd(m, 30)
         reach = {0}
         for d, r in p:
             if d != EMPTY:
@@ -229,7 +239,8 @@ class BrightMinimal:
                     if y not in reach:
                         reach.add(y)
                         frontier.append(y)
-        return self.residue not in reach
+        a, mod = self.residue, self.modulus
+        return not any(x % mod == a and gcd(x, 30) == 1 for x in reach)
 
     # -- kernel -------------------------------------------------------------
     # The subword test dominates the running time, so the kernel is compiled
