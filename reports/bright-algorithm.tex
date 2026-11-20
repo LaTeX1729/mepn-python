@@ -29,7 +29,7 @@
 \maketitle
 
 \begin{abstract}
-This report describes the algorithm in \code{bright/minimal.py}, a line-for-line Python translation of Curtis Bright's \code{minimal.c}, and the programs that finish its work: \code{simple}, \code{sieve-start}, \code{sieve}, \code{merge}, \code{search} and \code{organize}. It assumes the reader knows the published account of minimal primes and of the search in Bright, Devillers and Shallit~\cite{BDS}. The aim is to say precisely what each step of the implementation does, why it preserves correctness, and where the implementation differs from or extends the published description, notably in the restriction to primes in a residue class.
+This report describes the algorithm in \code{bright/minimal.py}, a line-for-line Python translation of Curtis Bright's \code{minimal.c}, and the programs that finish its work: \code{simple}, \code{sieve-start}, \code{sieve}, \code{merge}, \code{search} and \code{organize}. It assumes the reader knows the published account of minimal primes and of the search in Bright, Devillers and Shallit~\cite{BDS}. The aim is to say precisely what each step of the implementation does, why it preserves correctness, and where the implementation differs from or extends the published description, notably in the restriction to primes in a residue class. It also discusses when, and whether, the computation terminates.
 \end{abstract}
 
 \tableofcontents
@@ -82,7 +82,7 @@ Two facts are used throughout:
 \end{algorithmic}
 \end{algorithm}
 
-The loop ends either with $\U=\emptyset$ or with only simple families left. Both endings occur in practice. Nothing guarantees that the loop terminates, but it has terminated in every base computed so far, because the number of families eventually stops growing as kernel words rule out more and more digits.
+The loop ends either with $\U=\emptyset$ or with only simple families left. Both endings occur in practice, but neither is guaranteed; Section~\ref{sec:termination} discusses termination.
 
 \section{Initialization}
 
@@ -187,6 +187,23 @@ After each exploration round the program writes the unsolved families and the ke
 These allow a run to be resumed (\code{minimal resume b i}), and they were compared byte for byte with the C program's files for bases 2--20.
 
 Because families are not explored in order of length, a word added to $\K$ can contain a word added later. The final step therefore keeps only the $\sw$-minimal elements of $\K$ (\code{final\_kernel}). The same reduction is applied again by \code{organize} after the follow-up programs have added primes.
+
+\section{Termination}\label{sec:termination}
+
+The program is correct whenever it stops, by Proposition~\ref{prop:cover}, but there is no proof that it stops. This matches the published account: Bright, Devillers and Shallit describe the general procedure as a semi-algorithm and their method as heuristic, relying on modular and factorization arguments to rule out families~\cite{BDS}. They note that determining $M(L)$ is unsolvable for languages in general, and that for the primes it is not even known whether a simpler decision problem about families is solvable. There are three places where a run can fail to finish.
+
+\subsection{The splitting and exploration loops}
+Exploration replaces a family by $|R|+1$ longer ones, so $\U$ can grow. It shrinks only when \code{examine} discards families: through kernel words, which remove repeat digits and whole families, or through the certificates of Section~\ref{sec:divisor}. Nothing bounds the number of rounds. A non-simple family whose members are all composite, but whose compositeness none of the certificates detects, is explored forever. The cover invariant does not help here: $M(S)$ is finite, but a family can contain no element of $M(S)$ at all and still never be discarded. The inner loop, which repeats \code{split} and \code{split2} until nothing splits, has no termination proof either, although every rule except the forced-digit rule of \code{split} strictly shrinks a repeat set or bounds a repeat count.
+
+In practice the loop has reached the point where only simple families remain in every base from 2 to 20 and in base 36, the runs checked against the C program. It can take very long, however: for some residue classes (base 10 with $m=7$, for instance) the number of open families grows to tens of thousands.
+
+\subsection{Simple families}
+A simple family $x\,y^*z$ contains at most one minimal element, since of any two members the shorter is a subword of the longer. Its minimal element, if it has one, is the first member in $S$ that contains no kernel word. Once the main loop has stopped, the remaining work is therefore a search through $s(N),s(N+1),\dots$ for each family, as in~\cite{BDS}, and no general method decides whether such a search ends. Two things can make a family resolvable without finding a prime: a kernel word that becomes a subword of $x\,y^kz$ for some $k$ (checked by \code{simple} and \code{search}), or a proof found by other means that every member is composite; the program does not look for the latter. Otherwise the family stays open until a prime is found. The base-10 family $1\,0^*1$, whose members are $10^k+1$, shows how hard this can be as a problem in its own right (in the unrestricted base-10 run it is settled at once, since every member contains $11$): only $11$ and $101$ are known primes of this form, and it is open whether there are more (see \code{terminal-digits.tex}).
+
+When a search stops without finding a prime, the result is still informative. If every exponent up to $n$ has been tested, any minimal element of the family has more than $n$ repeated digits. \code{simple} records this bound for each data file, and the sieve files record exactly which exponents remain.
+
+\subsection{Probable primes}
+Members are accepted on a probable-prime test (\code{mpz\_probab\_prime\_p}, Baillie--PSW, or LLR's PRP test). The computed set is therefore correct provided that none of the accepted numbers is a pseudoprime. LLR proves primality for some forms such as $k\cdot b^n\pm1$, and \code{search} accepts those proofs as well. Very large probable primes, such as those with hundreds of thousands of digits in the reference sets for bases 21 and 23, can be certified only for special forms, so results that depend on them are, strictly speaking, conditional.
 
 \section{Restriction to a residue class}\label{sec:class}
 
