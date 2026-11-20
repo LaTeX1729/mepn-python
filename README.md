@@ -123,6 +123,8 @@ In a list comprehension you can use `range`, `isprime`, `gcd`, `isqrt`, `all`, `
 
 Classes with gcd(a, m) > 1 are skipped, since each holds at most one prime. `sieve` accepts the same forms, e.g. `sieve 10 --class 8`, and sieves each class that has a sieve file. Put the bases before `--class`.
 
+Verified minimal sets for several classes are kept in [`data-computed/`](data-computed/README.md), with how far each search went. `data-minimal-sets/` holds only the published reference sets.
+
 Results go to files tagged with the class, e.g. `data/minimal.10.1mod4.txt` and `iter/minimal-base10.1mod4-iter3.txt`, so they don't overwrite unfiltered runs.
 
 The rest of the pipeline works the same way. `simple`, `organize`, `sieve-start` and `search` handle every file in `data/`, tagged or not, so they need no extra option. Only `sieve` needs `--class` again, because it works on one base and class at a time.
