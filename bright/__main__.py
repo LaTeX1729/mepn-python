@@ -8,6 +8,7 @@
     python -m bright simple N M                  test unsolved families at lengths N..M
     python -m bright simple - M                  continue each file up to length M
     python -m bright organize                    sort lists, drop redundant entries
+    python -m bright covering                    remove simple families with a covering set
     python -m bright sieve-start N M             make sieve files for lengths N..M
     python -m bright sieve BASES [--class a m | --class m] [--pmax P]
                                                  run srsieve on the given bases
@@ -19,6 +20,7 @@ A typical run:
     python -m bright minimal 2 20
     python -m bright simple 1 1000
     python -m bright organize
+    python -m bright covering
     python -m bright sieve-start 1000 20000
     python -m bright sieve 17 --pmax 1e9
     python -m bright search 1000 20000
@@ -43,6 +45,9 @@ def main(argv=None):
         return run(rest)
     if cmd == "simple":
         from .simple import main as run
+        return run(rest)
+    if cmd == "covering":
+        from .covering import main as run
         return run(rest)
     if cmd == "organize":
         from .organize import main as run

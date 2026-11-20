@@ -207,3 +207,34 @@ class CommandLineTest(unittest.TestCase):
         finally:
             os.chdir(old)
             shutil.rmtree(d)
+
+
+class CoveringTest(unittest.TestCase):
+    def test_finds_period_6_covering(self):
+        from bright.covering import find_covering
+        L, cert = find_covering(10, "", "1", "221", (5, 8))
+        self.assertEqual(L, 6)
+        for n in range(200):
+            v = int("1" * n + "221")
+            self.assertEqual(v % cert[n % 6], 0)
+
+    def test_no_covering_when_a_prime_exists(self):
+        from bright.covering import find_covering
+        self.assertIsNone(find_covering(16, "F", "8", "F", (3, 4)))  # F 8^1517 F
+        self.assertIsNone(find_covering(10, "", "8", "9", None))     # 89 is prime
+
+    def test_command_removes_covered_family(self):
+        import contextlib
+        from bright.covering import run_covering
+        d = tempfile.mkdtemp()
+        try:
+            with open(os.path.join(d, "unsolved.10.1mod3.txt"), "w") as fh:
+                fh.write("1*221\n8*9\n")
+            with contextlib.redirect_stdout(io.StringIO()):
+                run_covering(datadir=d, out=io.StringIO())
+            self.assertEqual(read_lines(os.path.join(d, "unsolved.10.1mod3.txt")), ["8*9"])
+            cov = read_lines(os.path.join(d, "covered.10.1mod3.txt"))
+            self.assertEqual(len(cov), 1)
+            self.assertTrue(cov[0].startswith("1*221  period 6"))
+        finally:
+            shutil.rmtree(d)
