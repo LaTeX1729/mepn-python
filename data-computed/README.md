@@ -150,3 +150,12 @@ The base-10, 1 mod 4 set (146 primes, the longest with 79 digits) also agrees wi
 * In bases 12 and 20, 3 mod 4, the sets are just the one-digit primes in the class. Since the base is ≡ 0 (mod 4), the last digit alone fixes the residue mod 4. Every digit ≡ 3 (mod 4) that is coprime to the base is itself prime (3, 7, 11, and 19 in base 20), and in base 20 a number ending in 15 is divisible by 5.
 
 **Independent checks of the largest primes.** The largest new primes were tested twice: with GMP's `mpz_probab_prime_p` (Baillie–PSW plus 24 Miller–Rabin rounds) and with the program's own pure-Python Baillie–PSW test, which shares no code with GMP. Both accept 8^7733 77 in base 12 (8,348 decimal digits, 3 mod 8) and 2^19151 99 in base 10 (19,153 digits, 3 mod 4; 28 minutes with the Python test).
+
+## Continuing the unfinished sets
+
+The sets that are not complete are listed in `reports/class-minimal-sets.tex`, with their open families and how far each was searched. To continue one, run it in its own folder:
+
+* **Open simple families** (the report's Table 2): start from the same commands, then continue the search in new ranges, as described under "Long runs: stopping and resuming" in the main README.
+* **Unfinished `minimal`**: start the run with `python -m bright minimal B --class a m` and use `python -m bright minimal resume B I --class a m` to continue it after an interruption.
+
+When a set is complete, check it with the four checks above before adding it here.
