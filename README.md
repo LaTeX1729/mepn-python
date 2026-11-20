@@ -113,7 +113,10 @@ To run every class a mod m with gcd(a, m) = 1, give only the modulus. The bases 
 python -m bright minimal 10 --class 8                     # base 10: 1, 3, 5 and 7 mod 8
 python -m bright minimal 2-16,30 --class 4                # these bases, 1 and 3 mod 4
 python -m bright minimal "[b for b in range(2, 37) if b % 2 == 0]" --class 3
+python -m bright minimal "[b for b in range(2, 37) if not isprime(b)]" --class 4   # composite bases only
 ```
+
+In a list comprehension you can use `range`, `isprime`, `gcd`, `isqrt`, `all`, `any`, `min`, `max`, `len` and `sorted`.
 
 Classes with gcd(a, m) > 1 are skipped, since each holds at most one prime. `sieve` accepts the same forms, e.g. `sieve 10 --class 8`, and sieves each class that has a sieve file. Put the bases before `--class`.
 
