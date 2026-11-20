@@ -2,11 +2,11 @@
 
 Minimal sets computed with this repository's code that are not in `data-minimal-sets/`. That folder stays exactly as published, as the reference for the tests. File names follow `data/`: `minimal.<b>.<a>mod<m>.txt` holds the minimal primes of base b that are ≡ a (mod m). A set that is not complete also has an `unsolved.<b>.<a>mod<m>.txt` file listing its open families.
 
-All 93 sets below are **complete**: no families remain open.
+All 97 sets below are **complete**: no families remain open.
 
 ## Coverage
 
-The project computes the classes modulo 2, 3, 4, 6 and 8 with gcd(a, m) = 1 in the bases with at most two terminal digits: 2, 3, 4, 5, 6, 8, 10, 12, 14, 18, 20, 24, 30, 42 and 60 (see `reports/terminal-digits.tex`). That is 165 sets, of which 92 are complete here. Base 16, 3 mod 4 is the worked example from the main README. The status of the remaining 73 sets is in `reports/class-minimal-sets.tex`.
+The project computes the classes modulo 2, 3, 4, 6 and 8 with gcd(a, m) = 1 in the bases with at most two terminal digits: 2, 3, 4, 5, 6, 8, 10, 12, 14, 18, 20, 24, 30, 42 and 60 (see `reports/terminal-digits.tex`). That is 165 sets, of which 96 are complete here. Base 16, 3 mod 4 is the worked example from the main README. The status of the remaining 69 sets is in `reports/class-minimal-sets.tex`.
 
 ## Sets
 
@@ -44,10 +44,13 @@ The project computes the classes modulo 2, 3, 4, 6 and 8 with gcd(a, m) = 1 in t
 | 4 | 5 mod 8 | 2 | 2 | not needed | — | 5f7a5a5 |
 | 4 | 7 mod 8 | 2 | 3 | not needed | — | 5f7a5a5 |
 | 5 | 1 mod 2 | 9 | 5 | 1–4 | — | 5f7a5a5 |
+| 5 | 1 mod 3 | 49 | 206 | 1–203 | — | ae2a7b7 |
+| 5 | 2 mod 3 | 7 | 4 | not needed | — | ae2a7b7 |
 | 5 | 1 mod 4 | 80 | 86 | 1–83 | — | 5f7a5a5 |
 | 5 | 3 mod 4 | 4 | 3 | not needed | — | 5f7a5a5 |
 | 5 | 1 mod 6 | 49 | 206 | 1–203 | — | 5f7a5a5 |
 | 5 | 5 mod 6 | 19 | 54 | 1–51 | — | 5f7a5a5 |
+| 5 | 3 mod 8 | 60 | 947 | 1–300 | 300–942 | ae2a7b7 |
 | 6 | 1 mod 2 | 7 | 5 | not needed | — | 5f7a5a5 |
 | 6 | 1 mod 3 | 7 | 5 | not needed | — | 5f7a5a5 |
 | 6 | 2 mod 3 | 2 | 1 | not needed | — | 5f7a5a5 |
@@ -77,6 +80,7 @@ The project computes the classes modulo 2, 3, 4, 6 and 8 with gcd(a, m) = 1 in t
 | 12 | 3 mod 4 | 3 | 1 | not needed | — | 5f7a5a5 |
 | 12 | 1 mod 6 | 40 | 8 | 1–5 | — | 5f7a5a5 |
 | 12 | 5 mod 6 | 2 | 1 | not needed | — | 5f7a5a5 |
+| 12 | 3 mod 8 | 132 | 7,735 | 1–300 | 300–7733 | ae2a7b7 |
 | 12 | 5 mod 8 | 63 | 45 | 1–43 | — | 5f7a5a5 |
 | 12 | 7 mod 8 | 103 | 30 | 1–27 | — | 5f7a5a5 |
 | 14 | 1 mod 2 | 241 | 86 | 1–83 | — | 5f7a5a5 |
@@ -108,7 +112,7 @@ The project computes the classes modulo 2, 3, 4, 6 and 8 with gcd(a, m) = 1 in t
 
 **Search lengths** are the repeat counts n tested in families x yⁿ z. `simple` stops as soon as no families are left, so its range ends at the length where the last family was solved. Likewise `search` ends at the exponent of the last family's prime. "Not needed" means `minimal` left no open families.
 
-**How they were computed.** `python -m bright minimal B --class a m`, then `simple 1 300` and `organize`. Where families remained, this was followed by `sieve-start 300 3000`, `sieve B --class a m --pmax 1e6`, `search 300 3000` and `organize`. Base 16, 3 mod 4 used 100 and 2000 instead of 300 and 3000. The built-in primality test was used (no gmpy2 or LLR). The code is the same at commits 32518ac and 5f7a5a5 apart from documentation.
+**How they were computed.** `python -m bright minimal B --class a m`, then `simple 1 300` and `organize`. Where families remained, this was followed by `sieve-start 300 3000`, `sieve B --class a m --pmax 1e6`, `search 300 3000` and `organize`. Base 16, 3 mod 4 used 100 and 2000 instead of 300 and 3000. Sets at commit ae2a7b7 used `search 300 10000` with GMP's `mpz_probab_prime_p` called directly (no gmpy2 or LLR); the others used the built-in test. Commit ae2a7b7 adds a test for class runs that lets the base-5 sets finish; rerunning the 92 earlier class sets with it reproduced every one exactly.
 
 **Checks.** Every set was checked independently of the program:
 
