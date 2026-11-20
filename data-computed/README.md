@@ -8,6 +8,16 @@ All 98 sets below are **complete**: no families remain open.
 
 The project computes the classes modulo 2, 3, 4, 6 and 8 with gcd(a, m) = 1 in the bases with at most two terminal digits: 2, 3, 4, 5, 6, 8, 10, 12, 14, 18, 20, 24, 30, 42 and 60 (see `reports/terminal-digits.tex`). That is 165 sets, of which 97 are complete here. Base 16, 3 mod 4 is the worked example from the main README. The status of the remaining 68 sets is in `reports/class-minimal-sets.tex`.
 
+## Unrestricted sets
+
+Minimal sets for all primes, in bases with no published set in `data-minimal-sets/`.
+
+| Base | Primes | Longest (digits) | `simple` lengths | `search` lengths | Commit |
+|---|---|---|---|---|---|
+| 60 | 16,146 | 1,938 | 1–300 | 300–1937 | 30b4978 |
+
+Base 60 has two possible terminal digits, 1 and 49 (`n`), since every other unit below 60 is prime (`reports/terminal-digits.tex`). Every multi-digit element ends in one of them: 7,548 in 1 and 8,581 in `n`. The longest is e^1937 1. The set passed checks 1–3 below (check 4 needs a published set). It took about 35 minutes on one core, most of it in the first round of `minimal`, which went through about 78,000 families.
+
 ## Sets
 
 | Base | Class | Primes | Longest (digits) | `simple` lengths | `search` lengths | Commit |
