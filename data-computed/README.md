@@ -2,11 +2,11 @@
 
 Minimal sets computed with this repository's code that are not in `data-minimal-sets/`. That folder stays exactly as published, as the reference for the tests. File names follow `data/`: `minimal.<b>.<a>mod<m>.txt` holds the minimal primes of base b that are ≡ a (mod m). A set that is not complete also has an `unsolved.<b>.<a>mod<m>.txt` file listing its open families.
 
-All 97 sets below are **complete**: no families remain open.
+All 98 sets below are **complete**: no families remain open.
 
 ## Coverage
 
-The project computes the classes modulo 2, 3, 4, 6 and 8 with gcd(a, m) = 1 in the bases with at most two terminal digits: 2, 3, 4, 5, 6, 8, 10, 12, 14, 18, 20, 24, 30, 42 and 60 (see `reports/terminal-digits.tex`). That is 165 sets, of which 96 are complete here. Base 16, 3 mod 4 is the worked example from the main README. The status of the remaining 69 sets is in `reports/class-minimal-sets.tex`.
+The project computes the classes modulo 2, 3, 4, 6 and 8 with gcd(a, m) = 1 in the bases with at most two terminal digits: 2, 3, 4, 5, 6, 8, 10, 12, 14, 18, 20, 24, 30, 42 and 60 (see `reports/terminal-digits.tex`). That is 165 sets, of which 97 are complete here. Base 16, 3 mod 4 is the worked example from the main README. The status of the remaining 68 sets is in `reports/class-minimal-sets.tex`.
 
 ## Sets
 
@@ -72,6 +72,7 @@ The project computes the classes modulo 2, 3, 4, 6 and 8 with gcd(a, m) = 1 in t
 | 10 | 1 mod 2 | 33 | 8 | 1–5 | — | 5f7a5a5 |
 | 10 | 2 mod 3 | 251 | 66 | 1–65 | — | 5f7a5a5 |
 | 10 | 1 mod 4 | 146 | 79 | 1–77 | — | 5f7a5a5 |
+| 10 | 3 mod 4 | 113 | 19,153 | 1–300 | 300–19151 | e7ba51b |
 | 10 | 5 mod 6 | 309 | 66 | 1–65 | — | 5f7a5a5 |
 | 12 | 1 mod 2 | 22 | 8 | 1–5 | — | 5f7a5a5 |
 | 12 | 1 mod 3 | 40 | 8 | 1–5 | — | 5f7a5a5 |
@@ -112,7 +113,7 @@ The project computes the classes modulo 2, 3, 4, 6 and 8 with gcd(a, m) = 1 in t
 
 **Search lengths** are the repeat counts n tested in families x yⁿ z. `simple` stops as soon as no families are left, so its range ends at the length where the last family was solved. Likewise `search` ends at the exponent of the last family's prime. "Not needed" means `minimal` left no open families.
 
-**How they were computed.** `python -m bright minimal B --class a m`, then `simple 1 300` and `organize`. Where families remained, this was followed by `sieve-start 300 3000`, `sieve B --class a m --pmax 1e6`, `search 300 3000` and `organize`. Base 16, 3 mod 4 used 100 and 2000 instead of 300 and 3000. Sets at commit ae2a7b7 used `search 300 10000` with GMP's `mpz_probab_prime_p` called directly (no gmpy2 or LLR); the others used the built-in test. Commit ae2a7b7 adds a test for class runs that lets the base-5 sets finish; rerunning the 92 earlier class sets with it reproduced every one exactly.
+**How they were computed.** `python -m bright minimal B --class a m`, then `simple 1 300` and `organize`. Where families remained, this was followed by `sieve-start 300 3000`, `sieve B --class a m --pmax 1e6`, `search 300 3000` and `organize`. Base 16, 3 mod 4 used 100 and 2000 instead of 300 and 3000. Sets at commit ae2a7b7 or later used `search 300 10000` (and, where needed, further searches in steps of 10,000) with GMP's `mpz_probab_prime_p` called directly (no gmpy2 or LLR); the others used the built-in test. Commit ae2a7b7 adds a test for class runs that lets the base-5 sets finish; rerunning the 92 earlier class sets with it reproduced every one exactly.
 
 **Checks.** Every set was checked independently of the program:
 
