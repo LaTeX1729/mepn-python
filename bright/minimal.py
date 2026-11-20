@@ -832,35 +832,109 @@ def compute_base(base, log=sys.stdout, write_files=True, datadir="data", iterdir
 
 
 USAGE = """\
-Computes minimal primes for bases between l and h,
+Computes minimal primes for the given bases,
 possibly along with a set of unsolved families
-Usage: python -m bright.minimal l h [--class a m]
-To resume base b from iteration i: python -m bright.minimal resume b i [--class a m]
-  --class a m   only primes p with p = a (mod m), e.g. --class 1 4"""
+Usage: python -m bright minimal BASES [--class a m | --class m]
+  BASES         l h                 bases l to h, e.g. 2 20
+                list                e.g. 10   2-20   2-10,16,30-36
+                list comprehension  e.g. "[b for b in range(2, 37) if b % 2 == 0]"
+  --class a m   only primes p with p = a (mod m), e.g. --class 1 4
+  --class m     every class a mod m with gcd(a, m) = 1, one after another
+To resume base b from iteration i: python -m bright minimal resume b i [--class a m]"""
+
+
+def parse_bases(args):
+    """Bases from the command line: 'l h', a list such as '2-10,16', or a
+    Python expression giving a list of bases (a list comprehension).
+
+    The expression is evaluated with only range, gcd and the like available;
+    it runs on your own computer, as typed by you.
+    """
+    text = " ".join(args).strip()
+    if not text:
+        raise ValueError("no bases given")
+    if len(args) == 2 and all(a.lstrip("-").isdigit() for a in args):
+        lo, hi = int(args[0]), int(args[1])
+        bases = list(range(lo, hi + 1))
+    elif all(c in "0123456789,- " for c in text):
+        bases = []
+        for part in text.replace(" ", ",").split(","):
+            if not part:
+                continue
+            if "-" in part[1:]:
+                lo, hi = part.split("-", 1)
+                bases.extend(range(int(lo), int(hi) + 1))
+            else:
+                bases.append(int(part))
+    else:
+        import math
+        names = {"range": range, "gcd": math.gcd, "isqrt": math.isqrt,
+                 "list": list, "set": set, "sorted": sorted, "abs": abs,
+                 "min": min, "max": max, "len": len, "all": all, "any": any}
+        try:
+            value = eval(text, {"__builtins__": {}}, names)
+        except Exception as e:
+            raise ValueError("could not read bases %r: %s" % (text, e))
+        bases = [value] if isinstance(value, int) else list(value)
+    out = []
+    for b in bases:
+        if not isinstance(b, int) or isinstance(b, bool):
+            raise ValueError("base %r is not an integer" % (b,))
+        if not 2 <= b <= 62:
+            raise ValueError("base %d is outside 2..62" % b)
+        if b not in out:
+            out.append(b)
+    return out
+
+
+def coprime_residues(m):
+    """Residues a in 1..m-1 with gcd(a, m) = 1 (for m = 1, just 0)."""
+    from math import gcd
+    return [a for a in range(m) if gcd(a, m) == 1] if m > 1 else [0]
 
 
 def main(argv=None):
     argv = list(sys.argv[1:] if argv is None else argv)
-    residue = modulus = None
+    classes = [None]
     if "--class" in argv:
         k = argv.index("--class")
-        try:
-            residue, modulus = int(argv[k + 1]), int(argv[k + 2])
-        except (IndexError, ValueError):
-            print("--class needs two integers: a m", file=sys.stderr)
+        nums = []
+        for a in argv[k + 1:k + 3]:
+            if a.lstrip("-").isdigit():
+                nums.append(int(a))
+            else:
+                break
+        if not nums:
+            print("--class needs a m, or just m", file=sys.stderr)
             return 2
-        del argv[k:k + 3]
+        if nums[-1] < 1:
+            print("--class: the modulus must be at least 1", file=sys.stderr)
+            return 2
+        del argv[k:k + 1 + len(nums)]
+        if len(nums) == 2:
+            classes = [(nums[0] % nums[1], nums[1])]
+        else:
+            classes = [(a, nums[0]) for a in coprime_residues(nums[0])]
     if not argv:
         print(USAGE)
         return 0
     if argv[0] == "resume":
+        if len(classes) > 1:
+            print("resume needs a single class: --class a m", file=sys.stderr)
+            return 2
+        cls = classes[0] or (None, None)
         base, it = int(argv[1]), int(argv[2])
-        compute_base(base, resume_iter=it, residue=residue, modulus=modulus)
+        compute_base(base, resume_iter=it, residue=cls[0], modulus=cls[1])
         return 0
-    lo = int(argv[0])
-    hi = int(argv[1]) if len(argv) > 1 else lo
-    for base in range(lo, hi + 1):
-        compute_base(base, residue=residue, modulus=modulus)
+    try:
+        bases = parse_bases(argv)
+    except ValueError as e:
+        print(e, file=sys.stderr)
+        return 2
+    for base in bases:
+        for cls in classes:
+            residue, modulus = cls if cls else (None, None)
+            compute_base(base, residue=residue, modulus=modulus)
     return 0
 
 

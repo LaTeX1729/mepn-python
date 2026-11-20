@@ -156,3 +156,36 @@ class SubwordTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class CommandLineTest(unittest.TestCase):
+    def test_parse_bases(self):
+        from bright.minimal import parse_bases
+        self.assertEqual(parse_bases(["2", "5"]), [2, 3, 4, 5])
+        self.assertEqual(parse_bases(["10"]), [10])
+        self.assertEqual(parse_bases(["2-4,10,30-31"]), [2, 3, 4, 10, 30, 31])
+        self.assertEqual(parse_bases(["[b for b in range(2, 13) if b % 4 == 0]"]), [4, 8, 12])
+        for bad in (["70"], ["[1, 2]"], ['__import__("os")']):
+            with self.assertRaises(ValueError):
+                parse_bases(bad)
+
+    def test_coprime_residues(self):
+        from bright.minimal import coprime_residues
+        self.assertEqual(coprime_residues(8), [1, 3, 5, 7])
+        self.assertEqual(coprime_residues(12), [1, 5, 7, 11])
+
+    def test_class_m_runs_every_coprime_class(self):
+        import contextlib
+        from bright.minimal import main
+        d = tempfile.mkdtemp()
+        old = os.getcwd()
+        try:
+            os.chdir(d)
+            with contextlib.redirect_stdout(io.StringIO()):
+                main(["10,12", "--class", "4"])
+            names = sorted(n for n in os.listdir("data") if n.startswith("minimal"))
+            self.assertEqual(names, ["minimal.10.1mod4.txt", "minimal.10.3mod4.txt",
+                                     "minimal.12.1mod4.txt", "minimal.12.3mod4.txt"])
+        finally:
+            os.chdir(old)
+            shutil.rmtree(d)

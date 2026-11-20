@@ -107,6 +107,16 @@ python -m bright minimal 10 --class 1 4   # base 10, primes = 1 mod 4
 python -m bright minimal 2 16 --class 2 3  # bases 2-16, primes = 2 mod 3
 ```
 
+To run every class a mod m with gcd(a, m) = 1, give only the modulus. The bases can be a range, a list, or a Python list comprehension (in quotes):
+
+```sh
+python -m bright minimal 10 --class 8                     # base 10: 1, 3, 5 and 7 mod 8
+python -m bright minimal 2-16,30 --class 4                # these bases, 1 and 3 mod 4
+python -m bright minimal "[b for b in range(2, 37) if b % 2 == 0]" --class 3
+```
+
+Classes with gcd(a, m) > 1 are skipped, since each holds at most one prime. `sieve` accepts the same forms, e.g. `sieve 10 --class 8`, and sieves each class that has a sieve file. Put the bases before `--class`.
+
 Results go to files tagged with the class, e.g. `data/minimal.10.1mod4.txt` and `iter/minimal-base10.1mod4-iter3.txt`, so they don't overwrite unfiltered runs.
 
 The rest of the pipeline works the same way. `simple`, `organize`, `sieve-start` and `search` handle every file in `data/`, tagged or not, so they need no extra option. Only `sieve` needs `--class` again, because it works on one base and class at a time.
