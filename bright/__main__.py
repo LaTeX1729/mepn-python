@@ -6,6 +6,7 @@
                                                  comprehension; --class m runs
                                                  every a with gcd(a, m) = 1
     python -m bright simple N M                  test unsolved families at lengths N..M
+    python -m bright simple - M                  continue each file up to length M
     python -m bright organize                    sort lists, drop redundant entries
     python -m bright sieve-start N M             make sieve files for lengths N..M
     python -m bright sieve BASES [--class a m | --class m] [--pmax P]
