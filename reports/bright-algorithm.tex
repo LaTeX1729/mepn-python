@@ -1,0 +1,242 @@
+\documentclass[11pt]{article}
+\usepackage[T1]{fontenc}
+\usepackage{amsmath,amssymb,amsthm}
+\usepackage{fourier}
+\usepackage{booktabs}
+\usepackage{enumitem}
+\usepackage{algorithm}
+\usepackage{algpseudocode}
+\usepackage[margin=1in]{geometry}
+\usepackage[hidelinks]{hyperref}
+
+\newtheorem{lemma}{Lemma}
+\newtheorem{proposition}[lemma]{Proposition}
+\theoremstyle{definition}
+\newtheorem{definition}[lemma]{Definition}
+\theoremstyle{remark}
+\newtheorem{remark}[lemma]{Remark}
+
+\newcommand{\K}{\mathcal{K}}
+\newcommand{\U}{\mathcal{U}}
+\newcommand{\code}[1]{\texttt{#1}}
+\newcommand{\sw}{\preceq}   % subword (subsequence) order
+
+\title{The Bright Algorithm in \texttt{mepn-python}}
+\author{}  % add author
+\date{November 2026}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+This report describes the algorithm in \code{bright/minimal.py}, a line-for-line Python translation of Curtis Bright's \code{minimal.c}, and the programs that finish its work: \code{simple}, \code{sieve-start}, \code{sieve}, \code{merge}, \code{search} and \code{organize}. It assumes the reader knows the published account of minimal primes and of the search in Bright, Devillers and Shallit~\cite{BDS}. The aim is to say precisely what each step of the implementation does, why it preserves correctness, and where the implementation differs from or extends the published description, notably in the restriction to primes in a residue class.
+\end{abstract}
+
+\tableofcontents
+
+\section{Setting and invariant}
+
+Fix a base $b$ with $2\le b\le 62$. Words are strings over the digit alphabet $\{0,\dots,b-1\}$, written with the characters \code{0}--\code{9}, \code{A}--\code{Z}, \code{a}--\code{z}. For words $u,w$ write $u\sw w$ if $u$ is a subsequence (scattered subword) of $w$. Let $S$ be the target set: the base-$b$ representations of the primes, or, with \code{--class a m}, of the primes $p\equiv a\pmod m$. The minimal elements $M(S)$ of $S$ under $\sw$ form a finite set by Higman's lemma, and the program computes it.
+
+\begin{definition}
+A \emph{family} is a list of nodes $(d_0,R_0),\dots,(d_{L-1},R_{L-1})$, where each $d_i$ is a digit or empty and each $R_i$ is a set of digits. It denotes the language
+\[
+  d_0R_0^*\,d_1R_1^*\cdots d_{L-1}R_{L-1}^*.
+\]
+The empty digit is the value \code{EMPTY} (255 in the C code). A family is printed as, for example, \code{1\{03\}*\{5\}*2}. Its \emph{empty instance} is $\varepsilon(F)=d_0d_1\cdots d_{L-1}$, and for a list of picks $(i_1,j_1),\dots$ the instance $\iota(F;(i_1,j_1),\dots)$ inserts the $j$-th repeat digit of node $i$ after $d_i$ (function \code{instancestring}). A family is \emph{simple} if exactly one node has a nonempty repeat set and that set has one digit, so that $F=x\,y^*z$ for words $x,z$ and a digit $y$.
+\end{definition}
+
+The state of the computation is a \emph{kernel} $\K\subseteq S$, a list of words, and a list $\U$ of families. Every step preserves the following invariant.
+
+\begin{proposition}[Cover invariant]\label{prop:cover}
+Every element of $M(S)$ is either in $\K$ or is a member of some family in $\U$.
+\end{proposition}
+
+When $\U$ is empty, $M(S)$ is the set of $\sw$-minimal elements of $\K$, which \code{final\_kernel} extracts. When only simple families remain, the main program stops and hands them to the follow-up programs.
+
+Two facts are used throughout:
+\begin{enumerate}[label=(\alph*)]
+\item If some $k\in\K$ satisfies $k\sw w$, then $w\notin M(S)$ unless $w=k$. So any part of a family whose members all contain a kernel word can be discarded.
+\item If every member of a family is composite, or (with a class) lies outside the class, the family contains no element of $S$ and can be discarded.
+\end{enumerate}
+
+\section{Overview}
+
+\begin{algorithm}[h]
+\caption{\code{compute\_base} for one base}\label{alg:main}
+\begin{algorithmic}[1]
+\State $\U \gets \Call{initial}{}$ \Comment{kernel of words of length $\le 3$, families $x\{R\}^*y$}
+\While{$\U$ contains a non-simple family}
+  \Repeat
+     \For{\textsc{splitter} in (\textsc{split}, \textsc{split2})}
+        \State replace each $F\in\U$ by the families \textsc{splitter} produces
+        \State remove duplicates; \Call{examine}{} every family; remove duplicates
+     \EndFor
+  \Until{no family was split}
+  \State replace each $F\in\U$ by the families \Call{explore}{$F$, \textit{iter} mod 2, \textit{iter}} produces
+  \State remove duplicates; write the families and kernel to \code{iter/}
+  \State $\textit{iter}\gets \textit{iter}+1$
+\EndWhile
+\State $\K\gets$ the $\sw$-minimal elements of $\K$
+\State write $\K$ to \code{data/minimal.$b$.txt} and $\U$ to \code{data/unsolved.$b$.txt}
+\end{algorithmic}
+\end{algorithm}
+
+The loop ends either with $\U=\emptyset$ or with only simple families left. Both endings occur in practice. Nothing guarantees that the loop terminates, but it has terminated in every base computed so far, because the number of families eventually stops growing as kernel words rule out more and more digits.
+
+\section{Initialization}
+
+The kernel starts with the members of $S$ of length at most three that contain no earlier kernel word. They are generated in increasing numerical order (loops over $i,j,k$, with $i=j=0$ giving one digit and $i=0$ giving two), so each of them is minimal.
+
+Every element of $M(S)$ with four or more digits has the form $x\,w\,y$ with $x\ne 0$ a leading digit, $y$ a last digit and $w$ a nonempty word. For every digit $k$ of $w$, the word $xky$ is a subword of the element, so it must contain no kernel word. So for each pair $(x,y)$ the program forms
+\[
+  F_{x,y}=x\,\{k: \text{no } q\in\K \text{ has } q\sw xky\}^*\,y,
+\]
+discards it if \code{hasdivisor} proves all members composite, and otherwise \emph{explores} it once (Section~\ref{sec:explore}). The counter \textit{iter} is then reset to $0$.
+
+\section{Examining a family}\label{sec:examine}
+
+\code{examine}$(F)$ simplifies $F$ in place and returns whether it stays in $\U$.
+
+\begin{enumerate}[label=\arabic*.]
+\item Let $s=\varepsilon(F)$. Every member of $F$ contains $s$. If some kernel word is a subword of $s$, every member contains it, so $F$ is discarded. If $s\in S$, then $s$ is added to $\K$ and $F$ is discarded: every other member contains $s$ and so is not minimal.
+\item For each node $i$ and each repeat digit $r\in R_i$: if $\iota(F;(i,r))$ contains a kernel word, then no minimal member uses $r$ at node $i$, and $r$ is removed from $R_i$.
+\item Redundant repeats are removed. If a node with the single repeat digit $y$ is followed, through fixed digits equal to $y$ or empty, by another node whose only repeat digit is $y$, the second repeat is deleted: $y^*y\,y^*$ and $y^*y$ denote the same language.
+\item If no repeat digits remain, the only member is $s$, which is not in $S$ by step 1, and $F$ is discarded.
+\item If \code{hasdivisor}$(F)$ (Section~\ref{sec:divisor}) succeeds, $F$ is discarded.
+\end{enumerate}
+
+\section{Composite certificates}\label{sec:divisor}
+
+\code{hasdivisor}$(F)$ returns true only when every member of $F$ is provably composite or, with a class, outside it. The tests below are tried in order. Write $e$ for the value of $\varepsilon(F)$, and let $\iota(\dots)$ also denote the numerical value of an instance.
+
+\subsection{One divisor}
+Let $g=\gcd\bigl(e,\ \iota(F;(i,j)) \text{ for all } i,j\bigr)$. Inserting a digit is an affine operation on the value of a word, and this is the content of the lemma in~\cite{BDS}: $g$ then divides every member. If $g>1$ and $e>g$, every member is a proper multiple of $g$ and so composite.
+
+\subsection{Two divisors by parity at one node}
+For a node $m$ with $R_m\ne\emptyset$, split the members by whether they use an even or an odd number of digits from $R_m$. Let
+\begin{align*}
+  g_1 &= \gcd\bigl(e,\ \iota(F;(i,j))_{i\ne m},\ \iota(F;(m,i),(m,j))\bigr),\\
+  g_2 &= \gcd\bigl(\iota(F;(m,n)),\ \iota(F;(i,j),(m,n))_{i\ne m},\ \iota(F;(m,i),(m,j),(m,k))\bigr).
+\end{align*}
+The same argument as before shows that $g_1$ divides the even members and $g_2$ the odd ones. If both are greater than $1$ and less than $e$, the family is discarded.
+
+\subsection{Two repeating nodes}
+When exactly two nodes repeat, the program also tests a four-way parity split by the number of repeat digits used at each node: one gcd covers members with even counts at both nodes, \code{gcd2} odd at the first and even at the second, \code{temp2} even at the first and odd at the second, and \code{temp3} odd at both. All four must exceed $1$ and be less than $e$.
+
+\subsection{Simple families}
+When exactly one node repeats and its repeat set is a single digit $y$, the family is simple. Write the members as $s(n)=x\,y^n\,z$ with $x$ the fixed digits up to the node and $z$ those after it, $|z|=\zeta$. With $g=\gcd(y,b-1)$ and $q=(b-1)/g$,
+\[
+  q\,s(n)=A\,b^n-C,\qquad A=\Bigl(\frac{y}{g}+xq\Bigr)b^{\zeta},\quad C=\frac{y}{g}\,b^{\zeta}-zq .
+\]
+\begin{itemize}
+\item \textbf{Periodic divisors.} For $t\in\{3,4,5\}$ the program checks that $\gcd(s(r),s(r+t))$ lies strictly between $1$ and $e$ for $r=0,\dots,t-1$. This suffices because $s(n+t)=b^t s(n)+c_t$ with $c_t$ independent of $n$: a common factor of $s(r)$ and $s(r+t)$ divides $c_t$, and so divides every $s(r+kt)$.
+\item \textbf{Difference of squares.} If $A=\alpha^2$ and $C=\gamma^2$ with $\alpha-\gamma>q$ and $b$ is a square, then $q\,s(n)=(\alpha b^{n/2}-\gamma)(\alpha b^{n/2}+\gamma)$ for every $n$, and the smaller factor exceeds $q$, so $s(n)$ is composite. If $b$ is not a square, the factorization covers even $n$, and the family is still discarded when the odd-count divisor $g_2$ of the first repeating node covers odd $n$.
+\item \textbf{Difference of cubes.} The analogous test with cube roots, when $b$ is a cube.
+\end{itemize}
+
+\subsection{Residues modulo 30}
+The program computes the set of residues mod $30$ reachable by members of $F$. It reads the family from left to right; a fixed digit $d$ maps each residue $\rho$ to $\rho b+d$, and a repeat set is closed under $\rho\mapsto\rho b+r$ for $r\in R_i$. If no reachable residue is coprime to $30$, every member is divisible by $2$, $3$ or $5$. A member equal to $2$, $3$ or $5$ has at most three digits, so it was settled during initialization (it is in $\K$ or is not minimal); every other member is composite.
+
+\subsection{Residue class}
+With \code{--class a m}, the same closure computes the residues mod $m$ that members can reach (function \code{misses\_class}). If $a$ is not among them, no member is in $S$. This test is not in~\cite{BDS}; see Section~\ref{sec:class}.
+
+\section{Exploring a family}\label{sec:explore}
+
+\code{explore}$(F,\sigma,\textit{pos})$ picks the repeating node with index \textit{pos} modulo the number of repeating nodes, say $(d,R)$, and replaces $F$ by $|R|+1$ families that together have the same members:
+\[
+  dR^* \;=\; d \;\cup\; \bigcup_{r\in R} d\,r\,R^* \quad(\sigma=1),
+  \qquad
+  dR^* \;=\; d \;\cup\; \bigcup_{r\in R} d\,R^*\,r \quad(\sigma=0).
+\]
+That is, for $\sigma=1$ the node is replaced by $(d,\emptyset)(r,R)$ (the first repeated digit is $r$), for $\sigma=0$ by $(d,R)(r,\emptyset)$ (the last is $r$), and one further family drops the repeat altogether. Each new family is examined at once. The main loop alternates $\sigma$ with the parity of \textit{iter} and moves through the repeating nodes as \textit{iter} grows, so that families are lengthened at both ends of every repeat in turn.
+
+\section{Splitting}\label{sec:split}
+
+Splitting rewrites a family as a union of more constrained families, using kernel words to bound or forbid repeat digits. Each family carries a flag, \code{split}: 2 for freshly split, 1 if it may still split, 0 if it should not be split again in this round.
+
+\subsection{\code{split}: bounded repetitions}
+For each node $i$ and each $r\in R_i$, with $R'=R\setminus\{r\}$:
+\begin{itemize}
+\item If $\iota(F;(i,r)^n)$, with $r$ inserted $n$ times, contains a kernel word for some $n\in\{2,3,4,10\}$ (the first that does), then a minimal member uses $r$ at most $n-1$ times at node $i$. The family is replaced by the $n$ families with $c=0,1,\dots,n-1$ occurrences:
+\[
+  d_i\,R'^*\,(r\,R'^*)^c .
+\]
+\item After iteration $5$: if $\gcd\bigl(e,\ \iota(F;(i',j'))\text{ for } (i',j')\ne(i,r)\bigr)=g$ with $1<g<e$, then the members not using $r$ are all composite, so $r$ is used at least once; the family is replaced by $d_i R^*\,r\,R^*$.
+\end{itemize}
+
+\subsection{\code{split2}: pairs of digits}
+For two repeat digits $a$ (node $i$) and $c$ (node $m$, with $m\ge i$):
+\begin{itemize}
+\item \emph{Same node.} If both $ac$ and $ca$ (inserted at node $i$) contain kernel words, a minimal member cannot use both, and the family splits into the one without $a$ and the one without $c$. After iteration 5, a single forbidden pattern $\pi$ among $ac$, $ca$, $aca$, $cac$, $acac$, $caca$ is used to rewrite $R^*$ as a product of restricted repeats. For instance, words over $R$ avoiding $ac$ as a subword are exactly those in $(R\setminus\{a\})^*(R\setminus\{c\})^*$, and longer patterns give longer products.
+\item \emph{Different nodes.} If inserting $a$ at node $i$ and $c$ at node $m$ gives a word containing a kernel word, a minimal member uses at most one of them, and the family splits into the one without $a$ at node $i$ and the one without $c$ at node $m$.
+\end{itemize}
+A family that \code{split2} cannot split has its flag decreased by one, so families are not retried indefinitely within a round.
+
+\subsection{Why the thresholds}
+The rules that are tried only after iteration 5 cost more (gcd computations over all instances, or longer pattern checks) and pay off only once the families have grown. The constants $2,3,4,10$ and $5$ are those of \code{minimal.c}, and keeping them is what makes the Python iteration files identical to the C ones.
+
+\section{The main loop and its output}
+
+Duplicates are removed after every pass (\code{removedupes}). Families are compared by their printed form, and for simple families the shortest spelling of the same language is kept. Both programs therefore keep the same representative.
+
+After each exploration round the program writes the unsolved families and the kernel to the files
+\[
+  \code{iter/unsolved-base}b\code{-iter}i\code{.txt},\qquad \code{iter/minimal-base}b\code{-iter}i\code{.txt}.
+\]
+These allow a run to be resumed (\code{minimal resume b i}), and they were compared byte for byte with the C program's files for bases 2--20.
+
+Because families are not explored in order of length, a word added to $\K$ can contain a word added later. The final step therefore keeps only the $\sw$-minimal elements of $\K$ (\code{final\_kernel}). The same reduction is applied again by \code{organize} after the follow-up programs have added primes.
+
+\section{Restriction to a residue class}\label{sec:class}
+
+The option \code{--class a m} replaces $S$ by the base-$b$ words of primes $p\equiv a\pmod m$. Only two places in the program use $S$ directly:
+\begin{enumerate}[label=(\roman*)]
+\item the membership test (\code{isprime}), which now also checks the residue, and
+\item the new certificate \code{misses\_class} of Section~\ref{sec:divisor}.
+\end{enumerate}
+Every other rule rests either on fact (a), which holds for any kernel $\K\subseteq S$, or on fact (b), and a composite member is outside $S$ for every class. So Proposition~\ref{prop:cover} continues to hold, and the computed set is $M(S)$ for the restricted $S$.
+
+If $g=\gcd(a,m)>1$, every element of $S$ is divisible by $g$, so $S$ contains at most the prime $g$ itself, which is in the class only if $g=a$ (or $g=m$ when $a=0$). The program returns that prime, or nothing, directly.
+
+A class can make the problem much harder. With fewer elements in $S$, kernel words rule out fewer digits, and the number of open families can grow very large; base 10 with $m=7$ is an example.
+
+\section{Finishing the simple families}
+
+\subsection{Members as a sequence}
+A simple family $x\,y^*z$ has members
+\[
+  s(n)=\frac{K\,b^n+C}{Q},\qquad
+  K=\Bigl(\frac{y}{g}+xQ\Bigr)b^{\zeta},\quad
+  C=-\Bigl(\frac{y}{g}\,b^{\zeta}-zQ\Bigr),\quad
+  Q=\frac{b-1}{g},\ g=\gcd(y,b-1),
+\]
+the form used by srsieve and LLR (function \code{family\_sequence}). For example, $1^*$ in base $10$ is $(10^n-1)/9$, with $K=1$; srsieve writes such a sequence without the leading \code{1*}, and the Python code restores it.
+
+\subsection{\code{simple}}
+For $n=N,\dots,M$ and every family $x\,y^*z$, \code{simple} first finds the least $k$ for which some kernel word is a subword of $x\,y^k\,z$ (greedy matching, as in \code{subword} of the C code). If $k\le n$, the family is dropped, since all longer members contain that word. Otherwise it tests $x\,y^n z$; a member of $S$ is added to the kernel and its family dropped. The program stops once no families remain and records, for each data file, the largest $L$ for which every length up to $L$ has been tested, so that \code{simple - M} can continue.
+
+\subsection{Sieving}
+\code{sieve-start N M} writes, for every remaining family, the exponents $n\in[N,M]$ that survive a presieve by the primes below $\textit{pmin}=\max(31,\ \text{largest prime factor of } b-1 \ +1)$. For each such prime $\ell$ the exponents with $\ell\mid s(n)$ form an arithmetic progression, which is found from its first two terms; with a class, exponents with $s(n)\not\equiv a\pmod m$ are removed too. Families with no exponents left are not written, since srsieve rejects them. srsieve (Reynolds) then removes exponents with a prime factor $p\ge\textit{pmin}$ of $K b^n+C$. The primes dividing $Q$ are below \textit{pmin}, so srsieve never removes a member only because of the denominator. \code{sieve} runs srsieve in rounds of increasing prime limit, and \code{merge} keeps the exponents present in both the srsieve copy and the search copy of the file, so neither program repeats the other's work.
+
+\subsection{\code{search}}
+\code{search} takes the exponents in increasing order across all families. It first checks the kernel-subword condition as in \code{simple}, then tests $s(n)$, with LLR when available (input in LLR's ABC format \code{(\$a*\$b\^{}\$c\$d)/\$e}), otherwise with the built-in test. A probable prime is added to the kernel and its family removed; a composite exponent is removed from the sieve file, which therefore records the search's progress.
+
+\subsection{\code{organize}}
+\code{organize} sorts each kernel by length and then lexicographically, and removes every word that has an earlier word as a subword. Since $\sw$ is transitive, it suffices to test against the words already kept.
+
+\section{Implementation notes}
+
+\begin{itemize}
+\item \textbf{Subword tests.} The test ``does $p$ contain some kernel word as a subword'' dominates the running time. The kernel is compiled into regular expressions: a word $a_1\cdots a_k$ becomes \code{[\^{}$a_1$]*$a_1$\,[\^{}$a_2$]*$a_2$\,\dots}, which matches a prefix of $p$ exactly when the word is a subword of $p$, without backtracking. The kernel is compiled in frozen blocks of 64 words plus a tail, since it only grows.
+\item \textbf{Primality.} \code{minimal.c} calls \code{mpz\_probab\_prime\_p(n,25)}. With \code{gmpy2} installed, the Python code makes the same call; otherwise it runs a Baillie--PSW test (deterministic Miller--Rabin below $3.3\cdot10^{24}$). No Baillie--PSW pseudoprime is known, so the two agree in practice.
+\item \textbf{Departures from the C code.} String building uses the intended append semantics; \code{minimal.c}'s \code{sprintf(str,"\%s\%c",str,c)} overwrites instead of appending on glibc 2.37 and later. Resuming reads the iteration files directly, whereas the C code reads through a closed file handle. Everything else, including the order of operations and the thresholds, is kept, which is what makes the output identical.
+\item \textbf{Bases above 36.} Digits continue with \code{a}--\code{z}, GMP's convention, up to base 62. The C program stops at base 36.
+\end{itemize}
+
+\begin{thebibliography}{9}
+\bibitem{BDS} C.~Bright, R.~Devillers and J.~Shallit, Minimal elements for the prime numbers, \emph{Experimental Mathematics} 25(3) (2016), 321--331.
+\bibitem{mepn} C.~Bright, \code{mepn}, \url{https://github.com/curtisbright/mepn}.
+\end{thebibliography}
+
+\end{document}
