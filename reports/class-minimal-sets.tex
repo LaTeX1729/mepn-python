@@ -1,0 +1,148 @@
+\documentclass[11pt]{article}
+\usepackage[T1]{fontenc}
+\usepackage{amsmath,amssymb,amsthm}
+\usepackage{fourier}
+\usepackage{booktabs}
+\usepackage{enumitem}
+\usepackage[margin=1in]{geometry}
+\usepackage[hidelinks]{hyperref}
+
+\newcommand{\code}[1]{\texttt{#1}}
+\setlength{\emergencystretch}{3em}
+
+\title{Minimal sets for the classes modulo 2, 3, 4, 6 and 8\\ in bases with at most two terminal digits}
+\author{}  % add author
+\date{19 November 2026, 23:52 MST (UTC$-$07:00)}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+For the fifteen bases $b$ with at most two possible terminal digits ($c(b)\le 2$; see \code{terminal-digits.tex}) and the eleven classes $a \bmod m$ with $m\in\{2,3,4,6,8\}$ and $\gcd(a,m)=1$, we attempted all $165$ minimal sets. $92$ are complete, verified independently, and stored in \code{data-computed/}. $17$ are reduced to a few simple families that remain open after searching to length $3000$. In the other $56$, \code{minimal} did not finish within the time available. The report records the status of each set, the open families, and what the unfinished cases need.
+\end{abstract}
+
+\section{Scope}
+
+The bases are those with $c(b)\le 2$:
+\[
+  b\in\{2,3,4,6,8,12,18,24,30\}\ (c=1),\qquad b\in\{5,10,14,20,42,60\}\ (c=2).
+\]
+The classes are $1 \bmod 2$; $1,2 \bmod 3$; $1,3 \bmod 4$; $1,5 \bmod 6$; and $1,3,5,7 \bmod 8$. For each pair the target is the set of minimal elements, under the subsequence order, of the base-$b$ representations of the primes in the class (\code{bright-algorithm.tex}, Section~10).
+
+\section{Status}
+
+\begin{table}[h]
+\centering\small
+\setlength{\tabcolsep}{4.5pt}
+\begin{tabular}{@{}r|r|rr|rr|rr|rrrr@{}}
+\toprule
+ & \multicolumn{1}{c|}{mod 2} & \multicolumn{2}{c|}{mod 3} & \multicolumn{2}{c|}{mod 4} & \multicolumn{2}{c|}{mod 6} & \multicolumn{4}{c}{mod 8}\\
+$b$ & 1 & 1 & 2 & 1 & 3 & 1 & 5 & 1 & 3 & 5 & 7\\
+\midrule
+2 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 2 & 1 & 1 & 1 \\
+3 & 4 & 2 & 1 & 5 & 2 & 2 & 1 & 29 & 4 & 3 & 8 \\
+4 & 3 & $\circ_{1}$ & 2 & 3 & 1 & $\circ_{1}$ & 3 & 9 & 1 & 2 & 2 \\
+5 & 9 & $\times$ & $\times$ & 80 & 4 & 49 & 19 & $\times$ & $\times$ & $\times$ & $\times$ \\
+6 & 7 & 7 & 2 & 10 & 6 & 7 & 1 & 75 & 8 & 7 & 10 \\
+8 & 15 & $\circ_{5}$ & $\times$ & 38 & 2 & $\circ_{5}$ & $\times$ & 38 & 1 & 1 & 1 \\
+10 & 33 & $\circ_{2}$ & 251 & 146 & $\circ_{1}$ & $\circ_{2}$ & 309 & $\times$ & $\circ_{2}$ & $\circ_{1}$ & $\circ_{2}$ \\
+12 & 22 & 40 & 3 & 52 & 3 & 40 & 2 & $\circ_{1}$ & $\circ_{1}$ & 63 & 103 \\
+14 & 241 & $\times$ & $\times$ & $\circ_{1}$ & $\circ_{1}$ & $\times$ & $\times$ & $\times$ & $\times$ & $\times$ & $\times$ \\
+18 & 50 & 111 & 4 & $\circ_{2}$ & $\circ_{5}$ & 111 & 3 & $\times$ & $\times$ & $\times$ & $\times$ \\
+20 & 917 & $\times$ & $\times$ & 1{,}380 & 4 & $\times$ & $\times$ & $\times$ & $\circ_{2}$ & $\times$ & $\times$ \\
+24 & 360 & 811 & 5 & 648 & 5 & 811 & 4 & 891 & 3 & 2 & 2 \\
+30 & 220 & 489 & 6 & $\times$ & $\times$ & 489 & 5 & $\times$ & $\times$ & $\times$ & $\times$ \\
+42 & $\times$ & $\times$ & $\times$ & $\times$ & $\times$ & $\times$ & $\times$ & $\times$ & $\times$ & $\times$ & $\times$ \\
+60 & $\times$ & $\times$ & $\times$ & $\times$ & $\times$ & $\times$ & $\times$ & $\times$ & $\times$ & $\times$ & $\times$ \\
+\bottomrule
+\end{tabular}
+\caption{Status of the 165 sets. A number is the size of a complete set; $\circ_k$ means $k$ simple families are still open after searching to length $3000$; $\times$ means \code{minimal} did not finish.}
+\end{table}
+
+\begin{center}
+\begin{tabular}{@{}lrp{8.2cm}@{}}
+\toprule
+Status & Sets & Where\\
+\midrule
+Complete & 92 & all classes in bases 2, 3, 6, 24; most in 4, 12; some in 5, 8, 10, 14, 18, 20, 30\\
+Open simple families & 17 & see Table~\ref{tab:open}\\
+\code{minimal} unfinished & 56 & bases 42 and 60 entirely; the rest in 5, 8, 10, 14, 18, 20, 30\\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\section{Method}
+
+Each set was computed in its own folder with \code{minimal B --class a m} (time limit 20\,s, then 150\,s for sets in bases below 42), \code{simple 1 300} and \code{organize}. Where families remained, this was followed by \code{sieve-start 300 3000}, \code{sieve --pmax 1e6} and \code{search 300 3000} (time limit 240\,s). The code was \code{mepn-python} at commit \code{5f7a5a5}, with the built-in Baillie--PSW test and srsieve 0.6.17, on two processor cores. The full table of complete sets, with the lengths searched, is in \code{data-computed/README.md}.
+
+\section{Verification}
+
+Each of the 92 complete sets was checked by a separate script:
+\begin{enumerate}[label=(\arabic*)]
+\item every entry is a probable prime in the class;
+\item no entry is a subsequence of another;
+\item every prime $p<2\cdot10^7$ in the class contains an entry;
+\item every element of the published minimal set for base $b$ (in \code{data-minimal-sets/}) that lies in the class appears in the computed set.
+\end{enumerate}
+Check (4) uses independent data. If $p$ is minimal among all primes and $p\equiv a\pmod m$, then $p$ is also minimal among the primes $\equiv a \pmod m$, so it must be in the computed set. Published sets exist for every base here except 60, so all 92 complete sets were checked this way. All four checks passed for every set.
+
+\section{Relations between classes}
+
+\begin{itemize}
+\item \textbf{$1 \bmod 6 = 1 \bmod 3$.} Every prime $\equiv 1 \pmod 3$ is odd, so the two classes contain the same primes. The computed sets agree in every base where both finished.
+\item \textbf{$5 \bmod 6$ versus $2 \bmod 3$.} The primes $\equiv 5 \pmod 6$ are those $\equiv 2 \pmod 3$ except $2$. The $5 \bmod 6$ set is the $2 \bmod 3$ set with the word for $2$ removed and the primes that contained it as their only minimal subword added; in base 10 these include 2087 and 20021.
+\item \textbf{$1 \bmod 2$.} The same reasoning gives the odd primes: the published set without $2$, plus the odd primes that only $2$ ruled out. This was confirmed in all 13 bases where the set finished, with between 0 (base 2) and 267 (base 20) added elements, each containing the word for $2$.
+\end{itemize}
+
+\section{Open simple families}
+
+\begin{table}[h]
+\centering
+\begin{tabular}{@{}rlrll@{}}
+\toprule
+$b$ & class & primes & open families & searched to\\
+\midrule
+4  & 1 mod 3 (= 1 mod 6) & 17   & \code{1*21} & 3000\\
+8  & 1 mod 3 (= 1 mod 6) & 259  & \code{2*1}, \code{2*51}, \code{212*1}, \code{40*11}, \code{40*2211} & 3000\\
+10 & 1 mod 3 (= 1 mod 6) & 1{,}028 & \code{8*9}, \code{8*69} & 3000\\
+10 & 3 mod 4 & 112 & \code{2*99} & 3000\\
+10 & 3 mod 8 & 438 & \code{2*99}, \code{5*451} & 3000\\
+10 & 5 mod 8 & 868 & \code{1*221} & 3000\\
+10 & 7 mod 8 & 1{,}015 & \code{2*519}, \code{80*8511} & 3000\\
+12 & 1 mod 8 & 182 & \code{10*1} & 3000\\
+12 & 3 mod 8 & 131 & \code{8*77} & 3000\\
+14 & 1 mod 4 & 1{,}401 & \code{A*6BB} & 3000\\
+14 & 3 mod 4 & 1{,}243 & \code{4D*} & 3000\\
+18 & 1 mod 4 & 1{,}178 & \code{10*1}, \code{G*077} & 3000\\
+18 & 3 mod 4 & 2{,}287 & \code{4E*51}, \code{40*8HD}, \code{8*HH}, \code{C*D1}, \code{E50*F5} & 2659\\
+20 & 3 mod 8 & 2{,}282 & \code{1*817}, \code{D*GD7} & 2575\\
+\bottomrule
+\end{tabular}
+\caption{The 17 sets with open families (the mod 6 duplicates share a row). ``Primes'' counts the minimal primes found so far; ``searched to'' is the largest repeat count $n$ tested. Any further minimal prime in such a family has more than that many repeated digits.}
+\label{tab:open}
+\end{table}
+
+Two of the open families are \code{10*1} in bases 12 and 18. Its members are $1\,0^k\,1=b^{k+1}+1$, which can be prime only when $k+1$ is a power of $2$. So these searches reduce to generalized Fermat numbers $b^{2^j}+1$, much as the base-10 family $1\,0^*1$ discussed in \code{terminal-digits.tex}. Whether one of them is prime and lies in the class is decided by a handful of very large numbers, and may be beyond reach.
+
+The other families need longer searches. Beyond a few thousand digits this is practical only with gmpy2 and LLR, using \code{simple - M} and \code{search -} to continue across sessions.
+
+\section{Unfinished runs of \code{minimal}}
+
+The 56 sets where \code{minimal} did not finish behave in three distinct ways.
+
+\begin{itemize}
+\item \textbf{Bases 42 and 60 (22 sets).} \code{minimal} had not finished even its initial stage after 20\,s. For a base of this size, the initial kernel (all minimal words of up to three digits) and the $b(b-1)$ starting families are already large, and every later step is correspondingly expensive. These need a long run on a dedicated machine.
+\item \textbf{Growth (28 sets):} base 8 at $2 \bmod 3$ and $5 \bmod 6$; base 10 at $1 \bmod 8$; base 14 at all classes mod 3, 6 and 8; base 18 at all classes mod 8; base 20 at all classes mod 3 and 6 and at $1,5,7 \bmod 8$; base 30 at all classes mod 4 and 8. After 150\,s, these had between about 1{,}600 and 20{,}000 open families after only 0--12 iterations, and the four mod-8 classes of base 30 had not yet finished the initial stage. A sparser target set means fewer kernel words, so fewer digits are ruled out and exploration multiplies the families. These may finish with hours of computation, resuming with \code{minimal resume}.
+\item \textbf{Circling (6 sets):} base 5 with $1,2 \bmod 3$ and $1,3,5,7 \bmod 8$. After 150\,s, these had reached iterations 77--296 with only 600--4{,}300 families. The family count is not exploding but the loop does not end. This is the pattern described in \code{bright-algorithm.tex}, Section~9: probably a non-simple family whose members are all composite or outside the class, with no certificate able to rule it out. More time may never help; these need the recurring families identified and, if possible, a new divisibility argument.
+\end{itemize}
+
+\section{Next steps}
+
+\begin{enumerate}[label=\arabic*.]
+\item Identify the recurring families in the six base-5 sets and look for a certificate that rules them out.
+\item Continue the 17 open searches on a machine with gmpy2 and LLR.
+\item Run the 28 growing sets with \code{minimal resume} over several hours, and bases 42 and 60 as long-running jobs.
+\end{enumerate}
+New complete sets go into \code{data-computed/} with the same checks.
+
+\end{document}
