@@ -6,6 +6,10 @@ same:
 
 * if ``gmpy2`` is installed, ``gmpy2.is_prime(n, 25)`` is used (it wraps the
   same GMP routine as the C code);
+* otherwise, if the GMP library itself (``libgmp``) can be found, its
+  ``mpz_probab_prime_p(n, 25)`` is called directly through ``ctypes``. This is
+  the same routine at the same speed, without needing gmpy2 installed. Set
+  the environment variable ``BRIGHT_NO_LIBGMP=1`` to skip it;
 * otherwise a pure-Python Baillie-PSW test is used (trial division, a strong
   base-2 Fermat test, then a strong Lucas test with Selfridge parameters).
   Below 3.3 * 10**24 a deterministic Miller-Rabin test is used instead.
@@ -127,6 +131,63 @@ def _pure_python_is_probable_prime(n):
     return _strong_probable_prime(n, 2) and _strong_lucas_probable_prime(n)
 
 
+def _load_libgmp():
+    """``mpz_probab_prime_p`` from libgmp through ctypes, or None."""
+    import os
+    if os.environ.get("BRIGHT_NO_LIBGMP"):
+        return None
+    try:
+        import ctypes
+        import ctypes.util
+        names = [ctypes.util.find_library("gmp"), "libgmp.so.10", "libgmp.so",
+                 "libgmp.10.dylib", "libgmp.dylib", "libgmp-10.dll", "gmp.dll"]
+        lib = None
+        for name in names:
+            if not name:
+                continue
+            try:
+                lib = ctypes.CDLL(name)
+                break
+            except OSError:
+                continue
+        if lib is None:
+            return None
+
+        class _Mpz(ctypes.Structure):
+            _fields_ = [("alloc", ctypes.c_int), ("size", ctypes.c_int),
+                        ("d", ctypes.c_void_p)]
+
+        ptr = ctypes.POINTER(_Mpz)
+        init, clear = lib.__gmpz_init, lib.__gmpz_clear
+        init.argtypes = clear.argtypes = [ptr]
+        imp = lib.__gmpz_import
+        imp.argtypes = [ptr, ctypes.c_size_t, ctypes.c_int, ctypes.c_size_t,
+                        ctypes.c_int, ctypes.c_size_t, ctypes.c_char_p]
+        test = lib.__gmpz_probab_prime_p
+        test.argtypes = [ptr, ctypes.c_int]
+        test.restype = ctypes.c_int
+
+        def probab_prime_p(n, reps=25):
+            if n < 2:
+                return 0
+            z = _Mpz()
+            init(ctypes.byref(z))
+            try:
+                data = n.to_bytes((n.bit_length() + 7) // 8, "big")
+                imp(ctypes.byref(z), len(data), 1, 1, 1, 0, data)
+                return test(ctypes.byref(z), reps)
+            finally:
+                clear(ctypes.byref(z))
+
+        # Sanity check before trusting it.
+        if [probab_prime_p(k) > 0 for k in (1, 2, 9, 97, 561, 2**89 - 1, 2**89 + 1)] \
+                != [False, True, False, True, False, True, False]:
+            return None
+        return probab_prime_p
+    except Exception:  # pragma: no cover - any failure means: don't use it
+        return None
+
+
 if _gmpy2 is not None:  # pragma: no cover
 
     def is_probable_prime(n):
@@ -135,5 +196,14 @@ if _gmpy2 is not None:  # pragma: no cover
 
     BACKEND = "gmpy2"
 else:
-    is_probable_prime = _pure_python_is_probable_prime
-    BACKEND = "pure-python"
+    _libgmp_test = _load_libgmp()
+    if _libgmp_test is not None:
+
+        def is_probable_prime(n):
+            """``mpz_probab_prime_p(n, 25) > 0``, called in libgmp directly."""
+            return _libgmp_test(n, 25) > 0
+
+        BACKEND = "libgmp"
+    else:
+        is_probable_prime = _pure_python_is_probable_prime
+        BACKEND = "pure-python"

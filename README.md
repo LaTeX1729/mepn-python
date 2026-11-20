@@ -36,11 +36,15 @@ Requires Python 3.8+. It runs with no extra packages, but installing **gmpy2** i
 pip install gmpy2            # or: pip install -r requirements.txt
 ```
 
-gmpy2 is a standalone library, not part of a larger package. It wraps GMP, the same arithmetic library the original C code uses, and ships ready-made for Windows, macOS and Linux. With it installed, primality testing uses GMP's own `mpz_probab_prime_p`, exactly as in the C version. To check which is in use:
+gmpy2 is a standalone library, not part of a larger package. It wraps GMP, the same arithmetic library the original C code uses, and ships ready-made for Windows, macOS and Linux. With it installed, primality testing uses GMP's own `mpz_probab_prime_p`, exactly as in the C version.
+
+Without gmpy2, the program looks for the GMP library itself (`libgmp`, present on most Linux systems, WSL included) and calls `mpz_probab_prime_p` directly. That is the same routine at the same speed. Only if neither is available does it fall back to a built-in Python test, which is about 15 times slower at 3,000 digits and impractical beyond about 10,000. To check which is in use:
 
 ```sh
-python -c "import bright.primality as p; print(p.BACKEND)"   # gmpy2 or pure-python
+python -c "import bright.primality as p; print(p.BACKEND)"   # gmpy2, libgmp or pure-python
 ```
+
+Set `BRIGHT_NO_LIBGMP=1` to skip the direct libgmp call.
 
 ### The full pipeline
 
@@ -207,4 +211,4 @@ python -m unittest discover tests
 * **It gives wrong results on current Linux.** `minimal.c` builds strings with `sprintf(str, "%s%c", str, c)`, which reads and writes the same buffer. glibc 2.37 and later no longer appends in this case; it overwrites. Compiled as-is on a modern system, the program finds only 6 of the 8 base-5 minimal primes and then loops forever. The Python version uses the intended "append" behaviour. To rebuild the C for comparison, route `sprintf` through a temporary buffer.
 * **Resuming reads from a closed file.** `minimal resume b i` reads the unsolved families through the kernel file handle it has just closed. This is undefined behaviour. It currently works only because glibc reuses the closed handle's memory for the next file opened. The Python version reads `iter/unsolved-base<b>-iter<i>.txt` directly. A resumed run gives the same results as a full run (checked on base 13 from iteration 5).
 * **`simple.c` has the same sprintf problem** when it builds candidates, so on current Linux it tests the wrong numbers.
-* **Primality testing.** The C code uses GMP's `mpz_probab_prime_p(n, 25)`. Without `gmpy2`, the Python uses a Baillie–PSW test (deterministic Miller–Rabin below 3.3·10²⁴). No Baillie–PSW pseudoprime is known.
+* **Primality testing.** The C code uses GMP's `mpz_probab_prime_p(n, 25)`. The Python calls the same routine through gmpy2 or directly in libgmp when either is available; otherwise it uses a Baillie–PSW test (deterministic Miller–Rabin below 3.3·10²⁴). No Baillie–PSW pseudoprime is known.
