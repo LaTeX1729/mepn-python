@@ -18,15 +18,17 @@ jobs:
       fail-fast: false
       matrix:
         os: [windows-latest, ubuntu-latest]
-        gmpy2: [without, with]
+        backend: [pure-python, libgmp-or-default, gmpy2]
     runs-on: ${{ matrix.os }}
+    env:
+      BRIGHT_NO_LIBGMP: ${{ matrix.backend == 'pure-python' && '1' || '' }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
       - name: Install gmpy2
-        if: matrix.gmpy2 == 'with'
+        if: matrix.backend == 'gmpy2'
         run: pip install gmpy2
       - name: Primality backend
         run: python -c "import bright.primality as p; print(p.BACKEND)"
