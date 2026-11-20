@@ -165,6 +165,8 @@ class CommandLineTest(unittest.TestCase):
         self.assertEqual(parse_bases(["10"]), [10])
         self.assertEqual(parse_bases(["2-4,10,30-31"]), [2, 3, 4, 10, 30, 31])
         self.assertEqual(parse_bases(["[b for b in range(2, 13) if b % 4 == 0]"]), [4, 8, 12])
+        self.assertEqual(parse_bases(["[b for b in range(2, 17) if not isprime(b)]"]),
+                         [4, 6, 8, 9, 10, 12, 14, 15, 16])
         for bad in (["70"], ["[1, 2]"], ['__import__("os")']):
             with self.assertRaises(ValueError):
                 parse_bases(bad)

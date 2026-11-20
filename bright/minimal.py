@@ -837,7 +837,7 @@ possibly along with a set of unsolved families
 Usage: python -m bright minimal BASES [--class a m | --class m]
   BASES         l h                 bases l to h, e.g. 2 20
                 list                e.g. 10   2-20   2-10,16,30-36
-                list comprehension  e.g. "[b for b in range(2, 37) if b % 2 == 0]"
+                list comprehension  e.g. "[b for b in range(2, 37) if not isprime(b)]"
   --class a m   only primes p with p = a (mod m), e.g. --class 1 4
   --class m     every class a mod m with gcd(a, m) = 1, one after another
 To resume base b from iteration i: python -m bright minimal resume b i [--class a m]"""
@@ -868,7 +868,9 @@ def parse_bases(args):
                 bases.append(int(part))
     else:
         import math
-        names = {"range": range, "gcd": math.gcd, "isqrt": math.isqrt,
+        def isprime(n):
+            return n >= 2 and all(n % d for d in range(2, math.isqrt(n) + 1))
+        names = {"range": range, "gcd": math.gcd, "isqrt": math.isqrt, "isprime": isprime,
                  "list": list, "set": set, "sorted": sorted, "abs": abs,
                  "min": min, "max": max, "len": len, "all": all, "any": any}
         try:
