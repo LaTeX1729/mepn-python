@@ -139,7 +139,9 @@ When exactly one node repeats and its repeat set is a single digit $y$, the fami
 The program computes the set of residues mod $30$ reachable by members of $F$. It reads the family from left to right; a fixed digit $d$ maps each residue $\rho$ to $\rho b+d$, and a repeat set is closed under $\rho\mapsto\rho b+r$ for $r\in R_i$. If no reachable residue is coprime to $30$, every member is divisible by $2$, $3$ or $5$. A member equal to $2$, $3$ or $5$ has at most three digits, so it was settled during initialization (it is in $\K$ or is not minimal); every other member is composite.
 
 \subsection{Residue class}
-With \code{--class a m}, the same closure computes the residues mod $m$ that members can reach (function \code{misses\_class}). If $a$ is not among them, no member is in $S$. This test is not in~\cite{BDS}; see Section~\ref{sec:class}.
+With \code{--class a m}, the same closure computes the residues modulo $L=\operatorname{lcm}(m,30)$ that members can reach (function \code{misses\_class}). If no reachable residue $\rho$ satisfies both $\rho\equiv a\pmod m$ and $\gcd(\rho,30)=1$, then every member is outside the class or divisible by $2$, $3$ or $5$. A member equal to $2$, $3$ or $5$ has at most three digits and was settled during initialization, so no new element of $M(S)$ is lost. This test is not in~\cite{BDS}; see Section~\ref{sec:class}.
+
+Testing the two conditions on the same residues matters. In base $5$ with the class $3 \bmod 8$, the family $11\,0^*4^*1$ has members $6\cdot5^{a+b+1}+5^{b+1}-4$ (with $a$ zeros and $b$ fours). For odd $b$ these are divisible by $3$, and for even $b$ they are $\equiv 7 \pmod 8$. Neither the mod-30 test nor a test of the class alone rules the family out, and an earlier version of the program explored it indefinitely (\code{class-minimal-sets.tex}).
 
 \section{Exploring a family}\label{sec:explore}
 
