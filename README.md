@@ -55,11 +55,14 @@ python -m bright minimal 2 20            # 1. minimal primes + unsolved families
 python -m bright simple 1 1000           # 2. test families at lengths 1..1000 (stops early once none are left)
                                          #    later: simple - 2000 continues from where each file stopped
 python -m bright organize                # 3. sort lists, drop redundant entries
-python -m bright sieve-start 1000 20000  # 4. sieve files for lengths 1000..20000
-python -m bright sieve 17 --pmax 1e9     # 5. sieve base 17 with srsieve (optional, speeds up 6; one base at a time)
-python -m bright search 1000 20000       # 6. test what is left (LLR if available)
-python -m bright organize                # 7. tidy up again
+python -m bright covering                # 4. drop families with a covering set (optional, see below)
+python -m bright sieve-start 1000 20000  # 5. sieve files for lengths 1000..20000
+python -m bright sieve 17 --pmax 1e9     # 6. sieve base 17 with srsieve (optional, speeds up 7; one base at a time)
+python -m bright search 1000 20000       # 7. test what is left (LLR if available)
+python -m bright organize                # 8. tidy up again
 ```
+
+`covering` is not in the C code. It proves that a simple family x y* z has no member in the target set by finding a period L and a few small primes such that, for every n, x yⁿ z is divisible by one of them (or, with `--class`, lies outside the class). Such a family would otherwise be searched forever. For example, `1*221` in base 10 is covered with period 6: n ≡ 1, 4 (mod 6) give multiples of 3, n ≡ 3, 5 of 11, n ≡ 0 of 13 and n ≡ 2 of 7. The program's own periodic test in `minimal` only tries periods 3, 4 and 5. Removed families and their certificates are written to `data/covered.<b>.txt`. The proof is exact: the residues of x yⁿ z modulo each prime are eventually periodic, so checking one period beyond the preperiod covers every n.
 
 `simple` records the last length it finished for each unsolved file in `data/simple.<b>.txt` (e.g. `data/simple.10.3mod4.txt`), so `python -m bright simple - M` carries on from there up to M. Only an unbroken run of lengths from 1 counts, so if you skip lengths the record stays at the last one before the gap. `minimal` deletes the record when it writes a new unsolved list. `search` needs no such record: it removes each exponent it has tested from `data/sieve.<b>.txt`, and `python -m bright search -` carries on with what is left.
 
