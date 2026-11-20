@@ -60,6 +60,22 @@ class PipelineTest(unittest.TestCase):
                          % lines[-2].split("TIME ")[1])
         self.assertEqual(lines[-1], "No unsolved families left; stopping")
 
+    def test_simple_records_progress_and_continues(self):
+        from bright.simple import read_progress
+        os.makedirs(self.data)
+        with open(os.path.join(self.data, "unsolved.10.txt"), "w") as fh:
+            fh.write("8*\n")  # always even, so it stays open
+        progress = os.path.join(self.data, "simple.10.txt")
+        run_simple(1, 5, datadir=self.data, out=self.quiet)
+        self.assertEqual(read_progress(progress), 5)
+        out = io.StringIO()
+        run_simple(None, 8, datadir=self.data, out=out)
+        self.assertIn("base 10: continuing from length 6", out.getvalue())
+        self.assertNotIn("FINISHED LEVEL 5,", out.getvalue())
+        self.assertEqual(read_progress(progress), 8)
+        run_simple(20, 22, datadir=self.data, out=self.quiet)  # a gap: not recorded
+        self.assertEqual(read_progress(progress), 8)
+
     def test_sieve_and_search_complete_base_10(self):
         self.minimal([10])
         start_sieve(1, 30, datadir=self.data, sievedir=self.sieve)

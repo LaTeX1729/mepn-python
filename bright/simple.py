@@ -10,6 +10,12 @@ For each length n from N to M, and each family ``x y* z`` in every
 * otherwise the family stays unsolved.
 
 Usage:  python -m bright simple N M
+        python -m bright simple - M     continue each file from where it stopped
+
+The last length finished for each file is kept in ``data/simple.<b>.txt``
+(e.g. ``data/simple.10.3mod4.txt``). It records the highest L such that
+every length up to L has been done, so a run that skips lengths does not
+move it forward. ``minimal`` deletes it when it writes a new unsolved list.
 
 Afterwards run ``python -m bright organize`` to sort the lists and remove any
 entry that contains another.
@@ -42,12 +48,38 @@ class _KernelCheck:
         return best
 
 
+def read_progress(path):
+    """Last length finished for an unsolved file, or None."""
+    lines = read_lines(path)
+    try:
+        return int(lines[0]) if lines else None
+    except ValueError:
+        return None
+
+
 def run_simple(n, m, datadir="data", out=sys.stdout):
+    """Test lengths n..m. With n = None, each file continues after the last
+    length recorded for it (or from length 1)."""
+    files = data_files("unsolved", datadir)
+    starts = {}
+    for path, base, tag in files:
+        done = read_progress(file_for("simple", base, tag, datadir))
+        starts[path] = (done + 1 if done is not None else 1) if n is None else n
+    if not files:
+        print("No unsolved files in %s/" % datadir, file=out)
+        return
+    if n is None:
+        for path, base, tag in files:
+            print("base %d%s: continuing from length %d" % (base, tag, starts[path]),
+                  file=out, flush=True)
     checks = {}
-    for num in range(n, m + 1):
+    for num in range(min(starts.values()), m + 1):
         begin = time.process_time()
         count = 0
-        for path, base, tag in data_files("unsolved", datadir):
+        for path, base, tag in files:
+            if num < starts[path]:
+                count += sum(1 for _ in read_lines(path))
+                continue
             kernel_path = file_for("minimal", base, tag, datadir)
             kernel = read_lines(kernel_path)
             check = checks.setdefault(path, _KernelCheck())
@@ -75,6 +107,10 @@ def run_simple(n, m, datadir="data", out=sys.stdout):
                     remaining.append(line)
                     count += 1
             write_lines(path, remaining)
+            progress = file_for("simple", base, tag, datadir)
+            done = read_progress(progress) or 0
+            if num <= done + 1 and num > done:
+                write_lines(progress, [str(num)])
         print("FINISHED LEVEL %d, COUNT REMAINING %d, TIME %f"
               % (num, count, time.process_time() - begin), file=out, flush=True)
         if count == 0:
@@ -89,8 +125,9 @@ def main(argv=None):
         print("for prime candidates between exponents n and m,")
         print("given on the command-line")
         print("Usage: python -m bright simple n m")
+        print("       python -m bright simple - m   (continue each file from where it stopped)")
         return 0
-    run_simple(int(argv[0]), int(argv[1]))
+    run_simple(None if argv[0] == "-" else int(argv[0]), int(argv[1]))
     return 0
 
 

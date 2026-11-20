@@ -824,6 +824,10 @@ def compute_base(base, log=sys.stdout, write_files=True, datadir="data", iterdir
         os.makedirs(datadir, exist_ok=True)
         with open(os.path.join(datadir, "minimal.%d%s.txt" % (base, bm.tag)), "w") as fh:
             fh.writelines(p + "\n" for p in kernel)
+        # A new unsolved list starts the length count for simple afresh.
+        progress = os.path.join(datadir, "simple.%d%s.txt" % (base, bm.tag))
+        if os.path.exists(progress):
+            os.remove(progress)
         if unsolved:
             with open(os.path.join(datadir, "unsolved.%d%s.txt" % (base, bm.tag)), "w") as fh:
                 for f, _ in unsolved:

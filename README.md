@@ -49,12 +49,15 @@ All commands run from the folder where `data/` should be kept:
 ```sh
 python -m bright minimal 2 20            # 1. minimal primes + unsolved families
 python -m bright simple 1 1000           # 2. test families at lengths 1..1000 (stops early once none are left)
+                                         #    later: simple - 2000 continues from where each file stopped
 python -m bright organize                # 3. sort lists, drop redundant entries
 python -m bright sieve-start 1000 20000  # 4. sieve files for lengths 1000..20000
 python -m bright sieve 17 --pmax 1e9     # 5. sieve base 17 with srsieve (optional, speeds up 6; one base at a time)
 python -m bright search 1000 20000       # 6. test what is left (LLR if available)
 python -m bright organize                # 7. tidy up again
 ```
+
+`simple` records the last length it finished for each unsolved file in `data/simple.<b>.txt` (e.g. `data/simple.10.3mod4.txt`), so `python -m bright simple - M` carries on from there up to M. Only an unbroken run of lengths from 1 counts, so if you skip lengths the record stays at the last one before the gap. `minimal` deletes the record when it writes a new unsolved list. `search` needs no such record: it removes each exponent it has tested from `data/sieve.<b>.txt`, and `python -m bright search -` carries on with what is left.
 
 `python -m bright --help` lists the commands. For example, base 20 runs completely in a few seconds:
 
