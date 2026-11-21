@@ -1,0 +1,172 @@
+\documentclass[11pt]{article}
+\usepackage[T1]{fontenc}
+\usepackage{amsmath,amssymb,amsthm}
+\usepackage{fourier}
+\usepackage{booktabs}
+\usepackage{enumitem}
+\usepackage[margin=1in]{geometry}
+\usepackage[hidelinks]{hyperref}
+
+\newtheorem{theorem}{Theorem}
+\newtheorem{lemma}[theorem]{Lemma}
+\newtheorem{proposition}[theorem]{Proposition}
+\newtheorem{corollary}[theorem]{Corollary}
+\theoremstyle{definition}
+\newtheorem{definition}[theorem]{Definition}
+\newtheorem{example}[theorem]{Example}
+\theoremstyle{remark}
+\newtheorem{remark}[theorem]{Remark}
+
+\newcommand{\code}[1]{\texttt{#1}}
+\newcommand{\ord}{\operatorname{ord}}
+\setlength{\emergencystretch}{3em}
+
+\title{Covering sets for simple families}
+\author{}  % add author
+\date{21 November 2026}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+A simple family $x\,y^*z$ is \emph{covered} when every member $x\,y^n z$ is divisible by one of finitely many primes, chosen according to $n$ modulo a fixed period, or, in a residue-class run, lies outside the class. A covered family contains no prime, so a search through it would never end. We show that a covering is the same thing as a covering system of congruences for the exponent $n$, in the sense of Erd\H{o}s and Sierpi\'nski, and that whether a family is covered by a given finite set of primes can be decided by a finite computation over one period. This is what \code{python -m bright covering} does. We also prove that the family $1\,0^*1$, whose members are $b^{n+1}+1$, has no covering by any finite set of primes, which explains why the open families \code{10*1} cannot be settled this way.
+\end{abstract}
+
+\section{Setting}
+
+Fix a base $b\ge 2$, words $x$ and $z$, and a digit $y$, and consider the simple family $F=x\,y^*z$. Write $s(n)$ for the value of the word $x\,y^nz$ and $\zeta=|z|$. As in the rest of the program, the first digit of every member is nonzero, so $s(n)$ is strictly increasing in $n$. The value satisfies
+\[
+  s(n)=X_n\,b^{\zeta}+z,\qquad X_0=x,\qquad X_{n+1}=b\,X_n+y,
+\]
+where $x$, $y$, $z$ also denote the values of the words, and $X_n$ is the value of $x\,y^n$. With $g=\gcd(y,b-1)$ and $Q=(b-1)/g$ one has the closed form $Q\,s(n)=K b^n+C$ used by srsieve and LLR (\code{bright-algorithm.tex}, Section~11); the recurrence is more convenient here.
+
+The \emph{target set} $S$ is the set of primes, or, with \code{--class a m}, the set of primes $\equiv a\pmod m$. The question is whether $F$ contains an element of $S$.
+
+\section{Periodicity}
+
+\begin{lemma}\label{lem:period}
+For every modulus $q\ge 1$ the sequence $s(n)\bmod q$ is eventually periodic: there are integers $\mu_q\ge 0$ and $\pi_q\ge 1$ with $\mu_q+\pi_q\le q$ and
+\[
+  s(n+\pi_q)\equiv s(n)\pmod q\qquad\text{for all } n\ge\mu_q .
+\]
+If $\gcd(b,q)=1$, then $\mu_q=0$. For a prime $p$:
+\begin{enumerate}[label=(\alph*)]
+\item if $p\mid b$, then $s(n)\bmod p$ is constant for $n\ge 1$;
+\item if $p\nmid b$ and $b\not\equiv 1 \pmod p$, then $\pi_p=\ord_p(b)$, unless $X_0\equiv -y/(b-1)$, in which case $s(n)\bmod p$ is constant;
+\item if $b\equiv 1\pmod p$, then $X_n\equiv X_0+ny$, so $\pi_p=p$ if $p\nmid y$ and $\pi_p=1$ otherwise.
+\end{enumerate}
+\end{lemma}
+
+\begin{proof}
+$X_{n+1}\bmod q$ is determined by $X_n\bmod q$ through the affine map $T(X)=bX+y$ on $\mathbb{Z}/q\mathbb{Z}$, which has $q$ elements, so the orbit of $X_0$ enters a cycle after at most $q$ steps. Since $s(n)$ is a function of $X_n$, it inherits this. If $\gcd(b,q)=1$, then $T$ is a bijection, so every orbit is purely periodic. For (a), $X_n\equiv y\pmod p$ for $n\ge1$. For (b), $c=-y/(b-1)$ is the fixed point of $T$, and $X_n-c\equiv b^n(X_0-c)$; since $p\nmid b$, $s(n)$ determines $X_n$ modulo $p$, so the period of $s(n)$ is that of $X_n$. Part (c) is immediate.
+\end{proof}
+
+\section{Covering certificates}
+
+\begin{definition}
+A \emph{covering certificate} for $F$ consists of a finite set $P$ of primes, an integer $L\ge 1$, and an integer $N\ge 0$, together with the class $(a,m)$ in a class run, such that
+\begin{enumerate}[label=(\roman*)]
+\item $L$ is a multiple of $\pi_q$, and $N\ge\mu_q$, for every $q\in P$ and for $q=m$;
+\item for every $n$ with $0\le n<N+L$, either $s(n)\not\equiv a\pmod m$, or some $p\in P$ divides $s(n)$ and $s(n)\ne p$.
+\end{enumerate}
+Without a class, the first alternative in (ii) is dropped.
+\end{definition}
+
+\begin{theorem}[Soundness]\label{thm:sound}
+If $F$ has a covering certificate, then $F$ contains no element of $S$.
+\end{theorem}
+
+\begin{proof}
+For $n<N+L$ this is condition (ii): either $s(n)$ is outside the class, or it has a prime factor $p<s(n)$. Let $n\ge N+L$ and put $n'=N+\bigl((n-N)\bmod L\bigr)$, so that $N\le n'<N+L$ and $n\equiv n'\pmod L$. By (i) and Lemma~\ref{lem:period}, $s(n)\equiv s(n')$ modulo $m$ and modulo every $p\in P$. If $s(n')\not\equiv a\pmod m$, the same holds for $s(n)$. Otherwise some $p\in P$ divides $s(n')$, hence $s(n)$, and $s(n)>s(n')\ge p$ since $s$ is increasing; so $s(n)$ is composite.
+\end{proof}
+
+The condition $s(n)\ne p$ matters only for the first few members, which can be small. The implementation compares them with $p$ directly.
+
+\section{Coverings are covering systems}
+
+For $p\in P$ let $C_p\subseteq\mathbb{Z}/\pi_p\mathbb{Z}$ be the set of residues $r$ such that $p\mid s(n)$ for the $n\ge\mu_p$ with $n\equiv r\pmod{\pi_p}$; by Lemma~\ref{lem:period} this does not depend on the choice of $n$. In a class run, let $E\subseteq\mathbb{Z}/\pi_m\mathbb{Z}$ be the residues $r$ for which $s(n)\not\equiv a\pmod m$.
+
+\begin{theorem}[Covering systems]\label{thm:system}
+Let $P$ be a finite set of primes and $N\ge\max\mu_q$. Every $s(n)$ with $n\ge N$ is divisible by a prime of $P$ or lies outside the class if and only if the residue classes
+\[
+  \{\,r+\pi_p\mathbb{Z} : p\in P,\ r\in C_p\,\}\ \cup\ \{\,r+\pi_m\mathbb{Z} : r\in E\,\}
+\]
+cover $\mathbb{Z}$. In that case they form a covering system of congruences in the sense of Erd\H{o}s, and $F$ has a covering certificate with $L=\operatorname{lcm}\{\pi_q\}$ provided the finitely many members with $n<N$ are also covered.
+\end{theorem}
+
+\begin{proof}
+For $n\ge N$, $p\mid s(n)$ exactly when $n\bmod\pi_p\in C_p$, and $s(n)\not\equiv a$ exactly when $n\bmod\pi_m\in E$. A union of residue classes covers $\mathbb{Z}$ if and only if it covers all $n\ge N$, since the classes are periodic. The certificate is then the check of condition (ii) over one period of length $L$.
+\end{proof}
+
+\begin{corollary}[Decidability]\label{cor:decide}
+For a given finite set $P$ of primes, it is decidable by a finite computation whether $F$ is covered by $P$ (together with the class, in a class run). It suffices to compute $s(n)$ modulo each $q\in P\cup\{m\}$ for $0\le n<\max\mu_q+\operatorname{lcm}\{\pi_q\}$.
+\end{corollary}
+
+This is the theorem behind the command. It is exact in both directions for the primes and periods it tries: if a family is covered by some set of primes below $2000$ whose periods divide some $L\le 2520$, then trying $L$ with $P=\{p<2000:\pi_p\mid L\}$ finds a certificate, since enlarging $P$ only helps.
+
+\paragraph{Relation to Sierpi\'nski numbers.} The members of a simple family form a sequence $(Kb^n+C)/Q$. The classical examples of covered sequences are of this shape: Sierpi\'nski showed in 1960 that there are odd $k$ for which every $k\cdot 2^n+1$ is composite, and the smallest known such $k$, $78557$, is covered by $\{3,5,7,13,19,37,73\}$ with period $36$. Riesel numbers are the analogue for $k\cdot 2^n-1$. Both rest on covering systems of congruences, which Erd\H{o}s introduced in 1950. A covered simple family is the base-$b$ analogue, with the class condition as an extra kind of ``divisor''.
+
+\section{Examples}
+
+\begin{example}[$1^*221$ in base 10, class $5 \bmod 8$]
+Every member is $\equiv 5\pmod 8$, so the class excludes nothing. The four primes give
+\begin{align*}
+  3\mid s(n) &\iff n\equiv 1 \pmod 3, & 7\mid s(n) &\iff n\equiv 2 \pmod 6,\\
+  11\mid s(n) &\iff n\equiv 1 \pmod 2, & 13\mid s(n) &\iff n\equiv 0 \pmod 6.
+\end{align*}
+Here $\pi_3=3$ by Lemma~\ref{lem:period}(c), since $10\equiv1\pmod 3$, while $\pi_7=\ord_7(10)=6$, $\pi_{11}=2$ and $\pi_{13}=6$. Modulo $6$ these cover the residues $\{1,4\}$, $\{2\}$, $\{1,3,5\}$ and $\{0\}$, which is all of $\mathbb{Z}/6\mathbb{Z}$:
+
+\begin{center}
+\begin{tabular}{@{}lcccccc@{}}
+\toprule
+$n\bmod 6$ & 0 & 1 & 2 & 3 & 4 & 5\\
+divisor & 13 & 3 & 7 & 11 & 3 & 11\\
+\bottomrule
+\end{tabular}
+\end{center}
+
+So base 10, $5 \bmod 8$ is complete. Its last open family had been searched to length 957, after which the sieve left no candidates, as it must.
+\end{example}
+
+\begin{example}[$5^*451$ in base 10, class $3 \bmod 8$]
+The same four primes, with the classes $3\mid s(n)\iff n\equiv1\ (3)$, $7\iff n\equiv 5\ (6)$, $11\iff n$ even, $13\iff n\equiv 3\ (6)$, again cover $\mathbb{Z}/6\mathbb{Z}$.
+\end{example}
+
+\begin{example}[$1^*33$ in base 5, class $1 \bmod 8$]
+Here the class does most of the work. Modulo $8$ the members cycle through $2,3,0,1,6,7,4,5$ with period $8$, so only $n\equiv 3\pmod 8$ gives members $\equiv 1\pmod 8$. For those, $13\mid s(n)$, since $13\mid s(n)$ exactly when $n\equiv 3\pmod 4$ (and $\ord_{13}(5)=4$). The certificate has period $8$: seven residues are excluded by the class, one by $13$.
+\end{example}
+
+The 41 families removed in the runs of 20 November had periods 4 (11 families), 6 (5) and 8 (25). Every certificate was also checked on the actual numbers for $n\le 600$.
+
+\section{A family with no covering}
+
+The family $1\,0^*1$ has members $s(n)=b^{n+1}+1$. For every $n$ with $n+1$ not a power of $2$, $s(n)$ has an algebraic factor: if $n+1=2^jd$ with $d>1$ odd, then $b^{2^j}+1$ divides $s(n)$. Only the generalized Fermat numbers $F_j=b^{2^j}+1$ remain. They defeat every covering:
+
+\begin{theorem}\label{thm:gfn}
+Let $b\ge2$ be even. For every finite set $P$ of primes, all but at most $|P|$ of the numbers $F_j=b^{2^j}+1$ have no prime factor in $P$. Consequently $1\,0^*1$ has no covering certificate, either for all primes or for a class $a\bmod m$ that contains $F_j$ for infinitely many $j$. (For odd $b$ every member is even, and the family is covered by $\{2\}$.)
+\end{theorem}
+
+\begin{proof}
+If a prime $p$ divides $F_j$, then $b^{2^j}\equiv-1\pmod p$, so $b^{2^{j+1}}\equiv1$ and $b^{2^j}\not\equiv1$; hence $\ord_p(b)=2^{j+1}$. (Since $b$ is even, $F_j$ is odd, and no prime dividing $b$ divides $F_j$.) So $p$ determines $j$, and the primes of $P$ divide $F_j$ for at most $|P|$ values of $j$. A certificate would require, for every $j$ with $F_j$ in the class, a prime of $P$ dividing $s(2^j-1)=F_j$; for infinitely many such $j$ this is impossible.
+\end{proof}
+
+In base 10 with the class $1 \bmod 8$, $F_j\equiv 1\pmod 8$ for every $j\ge2$, because $8\mid 10^k$ for $k\ge3$. So the class never excludes these numbers, and Theorem~\ref{thm:gfn} applies: deciding \code{10*1} in this class is equivalent to deciding whether some $10^{2^j}+1$ with $j\ge2$ is prime, which is open. The same argument applies to the open families \code{10*1} in base 12 ($1 \bmod 8$) and base 18 ($1 \bmod 4$), wherever the class contains the $F_j$.
+
+\begin{remark}
+Algebraic factorizations, such as the differences of squares and cubes tested in \code{minimal}, are not coverings either: the factors grow with $n$. A family can be ruled out by a mixture, with some residues of $n$ covered by small primes and the others by an algebraic factorization; the Sierpi\'nski problem has examples of this kind. The \code{covering} command does not look for such mixtures.
+\end{remark}
+
+\section{Implementation}
+
+\code{bright/covering.py} implements Corollary~\ref{cor:decide} directly.
+\begin{enumerate}[label=\arabic*.]
+\item For each prime $p<2000$, and for the class modulus $m$, it finds $\mu_p$ and $\pi_p$ by running $X\mapsto bX+y$ until a value repeats.
+\item It computes $s(n)$ modulo each of these, once, for $0\le n<\max\mu+2520$.
+\item For $L=1,2,\dots,2520$ (with $\pi_m\mid L$ in a class run), it takes $P=\{p:\pi_p\mid L\}$ and checks condition (ii) for $n<\max_{q}\mu_q+L$. It stops at the first $L$ that works. A member that is small enough to equal one of the primes is compared with it exactly.
+\item It removes each covered family from \code{data/unsolved.<b>.txt} and appends the certificate to \code{data/covered.<b>.txt}, as one line giving the family, $L$ and, for each residue of $n$ modulo $L$, the prime that divides those members or the word \code{class}.
+\end{enumerate}
+The bound $2520=\operatorname{lcm}(1,\dots,10)$ admits every period built from small orders; the bound $2000$ on the primes is arbitrary and can be raised. The test does not depend on how far a family has been searched, and it does not affect \code{minimal}, so runs still reproduce the C program exactly.
+
+\paragraph{Validation.} On 300 families $x\,y^*z$ taken from published minimal primes with $n\ge4$, which therefore contain a prime, no covering was claimed, as Theorem~\ref{thm:sound} requires. Each certificate produced in the runs was rechecked on the actual members for $n\le600$, independently of the residue computation. The test suite checks the period-6 certificate for $1^*221$ on the actual numbers and checks that families with known primes are not covered.
+
+\end{document}
