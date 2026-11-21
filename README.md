@@ -103,6 +103,14 @@ python -m bright organize
 python -m bright covering
 ```
 
+**A script for a whole class.** `run-class.sh`, in the repository folder, asks for the base, the class, a folder and the search ranges (with defaults), and then runs the whole pipeline in that folder: `minimal`, `simple`, `organize`, `covering`, `sieve-start`, `sieve`, `search`, `organize`, `covering`. If the folder holds a saved iteration from an earlier run, it offers to resume `minimal` from it. It can run in the background under `nohup`, and it logs every step with a timestamp to `run.log` in the folder. It works from any directory, since it sets `PYTHONPATH` to its own repository:
+
+```sh
+mkdir -p ~/runs && cd ~/runs
+~/mepn-python/run-class.sh
+tail -f ~/runs/60.1mod8/run.log      # if started in the background
+```
+
 **Suggestions for long runs**
 
 * **Use one folder per base and class.** Every command works on all the files in `data/`, so separate folders keep long runs from interfering with each other, and each folder has its own `iter/` files.
