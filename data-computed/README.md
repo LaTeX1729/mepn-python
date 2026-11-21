@@ -2,11 +2,11 @@
 
 Minimal sets computed with this repository's code that are not in `data-minimal-sets/`. That folder stays exactly as published, as the reference for the tests. File names follow `data/`: `minimal.<b>.<a>mod<m>.txt` holds the minimal primes of base b that are ≡ a (mod m). A set that is not complete also has an `unsolved.<b>.<a>mod<m>.txt` file listing its open families.
 
-All 104 sets below are **complete**: no families remain open.
+All 108 sets below are **complete**: no families remain open.
 
 ## Coverage
 
-The project computes the classes modulo 2, 3, 4, 6 and 8 with gcd(a, m) = 1 in the bases with at most two terminal digits: 2, 3, 4, 5, 6, 8, 10, 12, 14, 18, 20, 24, 30, 42 and 60 (see `reports/terminal-digits.tex`). That is 165 sets, of which 103 are complete here. Base 16, 3 mod 4 is the worked example from the main README. The status of the remaining 62 sets is in `reports/class-minimal-sets.tex`.
+The project computes the classes modulo 2, 3, 4, 6 and 8 with gcd(a, m) = 1 in the bases with at most two terminal digits: 2, 3, 4, 5, 6, 8, 10, 12, 14, 18, 20, 24, 30, 42 and 60 (see `reports/terminal-digits.tex`). That is 165 sets, of which 107 are complete here. Base 16, 3 mod 4 is the worked example from the main README. The status of the remaining 58 sets is in `reports/class-minimal-sets.tex`.
 
 ## Unrestricted sets
 
@@ -126,10 +126,15 @@ Base 60 has two possible terminal digits, 1 and 49 (`n`), since every other unit
 | 30 | 2 mod 3 | 6 | 1 | not needed | — | 5f7a5a5 |
 | 30 | 1 mod 6 | 489 | 1,024 | 1–300 | 300–1022 | 5f7a5a5 |
 | 30 | 5 mod 6 | 5 | 1 | not needed | — | 5f7a5a5 |
+| 60 | 1 mod 2 | 17,995 | 1,938 | 1–300 | 300–1937 | 477dc6a |
+| 60 | 2 mod 3 | 10 | 1 | not needed | — | 477dc6a |
+| 60 | 3 mod 4 | 9 | 1 | not needed | — | 477dc6a |
+| 60 | 5 mod 6 | 9 | 1 | not needed | — | 477dc6a |
 
 **Search lengths** are the repeat counts n tested in families x yⁿ z. `simple` stops as soon as no families are left, so its range ends at the length where the last family was solved. Likewise `search` ends at the exponent of the last family's prime. "Not needed" means `minimal` left no open families.
 
 **How they were computed.** `python -m bright minimal B --class a m`, then `simple 1 300` and `organize`. Where families remained, this was followed by `sieve-start 300 3000`, `sieve B --class a m --pmax 1e6`, `search 300 3000` and `organize`. Base 16, 3 mod 4 used 100 and 2000 instead of 300 and 3000. Sets at commit ae2a7b7 or later used `search 300 10000` (and, where needed, further searches in steps of 10,000) with GMP's `mpz_probab_prime_p` called directly (no gmpy2 or LLR); the others used the built-in test. Commit ae2a7b7 adds a test for class runs that lets the base-5 sets finish; rerunning the 92 earlier class sets with it reproduced every one exactly.
+* In base 60, a number's residue mod 2, 3, 4 or 6 is that of its last digit, since these moduli divide 60. A minimal prime with two or more digits cannot end in a prime digit of its own class, so it ends in a non-prime unit, 1 or 49 (`n`), and both are ≡ 1 modulo 2, 3, 4 and 6. Hence the sets for 2 mod 3, 3 mod 4 and 5 mod 6 consist only of one-digit primes, and in the sets for 1 mod 2, 3, 4 and 6 every multi-digit element ends in 1 or `n`. The base-60 set for 1 mod 2 contains the whole unrestricted set except 2, plus 1,850 primes that only 2 ruled out.
 
 **Covered families.** "1 family covered" means that the last open families were removed by `python -m bright covering`, which proves that a family has no member in the class: for a period L, every member x yⁿ z is divisible by a small prime or lies outside the class, according to n mod L. The certificates are in `covered.<b>.<a>mod<m>.txt` next to the set, one family per line, and were also checked on the actual numbers for n ≤ 600.
 
