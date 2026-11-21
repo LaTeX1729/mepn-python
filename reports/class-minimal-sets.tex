@@ -12,13 +12,13 @@
 
 \title{Minimal sets for the classes modulo 2, 3, 4, 6 and 8\\ in bases with at most two terminal digits}
 \author{}  % add author
-\date{19 November 2026, 23:52 MST (UTC$-$07:00)\\ Updated 20 November 2026, 01:40 and 13:21 MST}
+\date{19 November 2026, 23:52 MST (UTC$-$07:00)\\ Updated 20 November 2026, 01:40, 13:21 and 22:20 MST}
 
 \begin{document}
 \maketitle
 
 \begin{abstract}
-For the fifteen bases $b$ with at most two possible terminal digits ($c(b)\le 2$; see \code{terminal-digits.tex}) and the eleven classes $a \bmod m$ with $m\in\{2,3,4,6,8\}$ and $\gcd(a,m)=1$, we attempted all $165$ minimal sets. $103$ are complete, verified independently, and stored in \code{data-computed/}. $14$ are reduced to simple families that remain open after searching to lengths between about $12{,}000$ and $65{,}000$. In the other $48$, \code{minimal} did not finish within the time available. Sections~\ref{sec:update} and~\ref{sec:final} describe the changes since the first version of this report, including a new test for class runs, covering sets for simple families, and the minimal set for base 60 itself. The report records the status of each set, the open families, and what the unfinished cases need.
+For the fifteen bases $b$ with at most two possible terminal digits ($c(b)\le 2$; see \code{terminal-digits.tex}) and the eleven classes $a \bmod m$ with $m\in\{2,3,4,6,8\}$ and $\gcd(a,m)=1$, we attempted all $165$ minimal sets. $110$ are complete, verified independently, and stored in \code{data-computed/}. $14$ are reduced to simple families that remain open after searching to lengths between about $12{,}000$ and $65{,}000$. In the other $41$, \code{minimal} did not finish within the time available. Sections~\ref{sec:update} and~\ref{sec:final} describe the changes since the first version of this report, including a new test for class runs, covering sets for simple families, and the minimal set for base 60 itself. The report records the status of each set, the open families, and what the unfinished cases need.
 \end{abstract}
 
 \section{Scope}
@@ -53,7 +53,7 @@ $b$ & 1 & 1 & 2 & 1 & 3 & 1 & 5 & 1 & 3 & 5 & 7\\
 24 & 360 & 811 & 5 & 648 & 5 & 811 & 4 & 891 & 3 & 2 & 2 \\
 30 & 220 & 489 & 6 & $\times$ & $\times$ & 489 & 5 & $\times$ & $\times$ & $\times$ & $\times$ \\
 42 & $\times$ & $\times$ & $\times$ & $\times$ & $\times$ & $\times$ & $\times$ & $\times$ & $\times$ & $\times$ & $\times$ \\
-60 & $\times$ & $\times$ & $\times$ & $\times$ & $\times$ & $\times$ & $\times$ & $\times$ & $\times$ & $\times$ & $\times$ \\
+60 & 17{,}995 & 25{,}717 & 10 & 32{,}371 & 9 & 25{,}717 & 9 & $\times$ & $\times$ & $\times$ & $\times$ \\
 \bottomrule
 \end{tabular}
 \caption{Status of the 165 sets. A number is the size of a complete set; $\circ_k$ means $k$ simple families are still open (Table~\ref{tab:open}); $\times$ means \code{minimal} did not finish.}
@@ -64,9 +64,9 @@ $b$ & 1 & 1 & 2 & 1 & 3 & 1 & 5 & 1 & 3 & 5 & 7\\
 \toprule
 Status & Sets & Where\\
 \midrule
-Complete & 103 & all classes in bases 2, 3, 4, 6, 24; most in 5, 10, 12; some in 8, 14, 18, 20, 30\\
+Complete & 110 & all classes in bases 2, 3, 4, 6, 24; most in 5, 10, 12, 60; some in 8, 14, 18, 20, 30\\
 Open simple families & 14 & see Table~\ref{tab:open}\\
-\code{minimal} unfinished & 48 & bases 42 and 60 entirely; the rest in 8, 14, 18, 20, 30\\
+\code{minimal} unfinished & 41 & base 42 entirely, base 60 mod 8; the rest in 8, 14, 18, 20, 30\\
 \bottomrule
 \end{tabular}
 \end{center}
@@ -166,11 +166,21 @@ All passed the checks of Section~4. The prime $2^{19151}99$ was also tested with
 
 \paragraph{Growing sets.} Apart from base 20, $7 \bmod 8$, the growing sets did not converge. After further rounds, the base-14 sets had between 13{,}500 and 77{,}000 open families (iterations 3--5). Base 18 at $3, 5 \bmod 8$ had 21{,}000--34{,}000. Base 30 at $1, 3 \bmod 4$ had about 8{,}700 and 9{,}950 after the first round, and was growing in the second. Base 18 at $1, 7 \bmod 8$ and base 20 at $1, 5 \bmod 8$ did not finish a first round. These need much longer runs than this environment allows.
 
+\section{Base 60, 20 November 2026, 22:20 MST}\label{sec:base60}
+
+\paragraph{A faster \code{hasdivisor}.} In base 60 with a class, \code{minimal} did not finish even its initial stage in over an hour. Its time went into \code{hasdivisor}, whose gcd loops grow like $|R|^3$ and $|R|^4$ in the size of the repeat sets, and in class runs these sets stay large (up to 60 digits). Every such gcd is only compared with $1$ and with the empty instance, and a gcd of $1$ stays $1$, so each accumulation can stop as soon as it reaches $1$ without changing any decision. With this change the output is byte-identical to before, every iteration file included, for bases 2--24 and for class runs in bases 5, 10, 12 and 16, and those runs are 1.3--2.5 times faster. Base 60, $2 \bmod 3$ now takes under a second.
+
+\paragraph{The last digit decides.} Since 2, 3, 4 and 6 divide 60, a number's residue modulo these is that of its last digit. A minimal prime with two or more digits cannot end in a prime digit of its own class, so it ends in a non-prime unit, $1$ or $49$, and both are $\equiv 1$ modulo 2, 3, 4 and 6. So for $2 \bmod 3$, $3 \bmod 4$ and $5 \bmod 6$ the minimal set consists of the one-digit primes in the class: 10, 9 and 9 of them. For $1 \bmod 2$, $3$, $4$ and $6$, every multi-digit element ends in $1$ or $49$. Modulo 8 this argument fails, since $60\equiv 4 \pmod 8$ and the class depends on the last two digits.
+
+\paragraph{New complete sets.} Base 60 at $1 \bmod 2$ (17{,}995 primes; the unrestricted set without $2$, plus 1{,}850 primes that only $2$ ruled out), $1 \bmod 3$ and $1 \bmod 6$ (25{,}717 each), $1 \bmod 4$ (32{,}371, the longest with 3{,}709 digits), and the three one-digit sets. \code{minimal} took about 33 minutes for $1 \bmod 2$, 80 minutes for $1 \bmod 3$ and 4 hours for $1 \bmod 4$, whose first round alone reached about 478{,}000 families; \code{simple} then resolved every remaining family within length 300. All seven sets passed checks 1--3 of Section~4.
+
+\paragraph{Modulo 8.} Base 60, $1 \bmod 8$ ran for about 3.5 hours without finishing its first round (235{,}000 families after three splitting passes) and was stopped. The four mod-8 classes need a much longer run on a dedicated machine.
+
 \section{Next steps}
 
 \begin{enumerate}[label=\arabic*.]
 \item Continue the 14 open searches, best on a machine with LLR. Three of them (\code{10*1} in bases 10, 12 and 18) reduce to generalized Fermat numbers and may never resolve.
-\item Run the 26 growing sets with \code{minimal resume} over several hours, and bases 42 and 60 as long-running jobs.
+\item Run base 60 modulo 8 and the 26 growing sets with \code{minimal resume} over several hours, and base 42 as a long-running job.
 \end{enumerate}
 New complete sets go into \code{data-computed/} with the same checks.
 
