@@ -1,2 +1,3 @@
 2026-11-21 21:05  sieved to 6e+08 (halves 6e+08, 6e+08): 20522 candidates (was 20522 at 6e+08)
 2026-11-21 22:45  sieved to 7.66e+10 (halves 7.66e+10, 7.66e+10): 16568 candidates (was 20522 at 6e+08)
+2026-11-22 00:31  sieved to 1.57e+11 (halves 1.57e+11, 1.57e+11): 16096 candidates (was 16568 at 7.66e+10)
