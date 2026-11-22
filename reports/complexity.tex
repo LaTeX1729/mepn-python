@@ -1,0 +1,179 @@
+\documentclass[11pt]{article}
+\usepackage[T1]{fontenc}
+\usepackage{amsmath,amssymb,amsthm}
+\usepackage{fourier}
+\usepackage{booktabs}
+\usepackage{enumitem}
+\usepackage[margin=1in]{geometry}
+\usepackage[hidelinks]{hyperref}
+
+\newtheorem{theorem}{Theorem}
+\newtheorem{proposition}[theorem]{Proposition}
+\theoremstyle{remark}
+\newtheorem{remark}[theorem]{Remark}
+
+\newcommand{\code}[1]{\texttt{#1}}
+\setlength{\emergencystretch}{3em}
+
+\title{The computational complexity of minimal sets}
+\author{}  % add author
+\date{21 November 2026}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+Three separate questions are involved. Whether the minimal set of the primes in base $b$ is computable at all is open: the procedure of Bright, Devillers and Shallit, implemented in \code{mepn-python}, is a semi-algorithm, correct when it stops but not known to stop. How large the answer is has no known bound; in the published data the number of minimal primes ranges from 2 to about 690{,}000 and the longest element from 2 to about 800{,}000 digits. Empirically the size is explained far better by $b$ together with the number $c(b)$ of possible terminal digits than by $b$ alone. Finally, where the computation spends its time: in \code{minimal}, on a number of families that no known bound controls, and in the searches, on primality tests whose cost we measure as growing like $d^{2.5}$ in the number of digits $d$. We also give a heuristic for how far a family must be searched.
+\end{abstract}
+
+\section{Computability}
+
+Write $M(L)$ for the set of minimal elements of a language $L$ under the subsequence order. By Higman's lemma, $M(L)$ is finite for every $L$. The proof is non-constructive: it gives no bound on $|M(L)|$ or on the length of its elements, and no way to compute $M(L)$ from a description of $L$.
+
+\begin{proposition}\label{prop:undecidable}
+There is no algorithm that computes $M(L)$ from a Turing machine accepting $L$.
+\end{proposition}
+
+\begin{proof}
+For a Turing machine $T$, let $L_T=\{0^t : T \text{ halts on empty input after exactly } t \text{ steps}\}$. A machine accepting $L_T$ is easily built from $T$. Then $M(L_T)=\{0^t\}$ if $T$ halts after $t$ steps and $M(L_T)=\varnothing$ otherwise, so computing $M(L_T)$ would decide the halting problem.
+\end{proof}
+
+For well-behaved languages the situation is different. If $L$ is regular, $M(L)$ can be read off a finite automaton for $L$. For context-free languages the downward closure is also effectively regular, a result usually attributed to van Leeuwen. The primes are neither, and for them the question is open:
+
+\begin{itemize}
+\item It is not known whether $b\mapsto M(\text{primes in base } b)$ is a computable function.
+\item As Bright, Devillers and Shallit note, it is not even known whether one can decide if a simple family $x\,y^*z$ contains a prime. This is the same kind of question as the Sierpi\'nski problem.
+\item The procedure is a semi-algorithm. It is correct whenever it stops (\code{bright-algorithm.tex}, Section~9), but it stops only if every family it meets is eventually settled by a kernel subword, a divisibility argument, a covering set or a prime. Covering sets decide some families (\code{covering.tex}), but the generalized Fermat families $1\,0^*1$ show that they cannot decide all of them.
+\end{itemize}
+
+The same applies to residue classes, which make the target set sparser without changing the nature of the question.
+
+\section{The size of the answer}
+
+\begin{table}[h]
+\centering\small
+\setlength{\tabcolsep}{5pt}
+\begin{tabular}{@{}rrrr@{\qquad}rrrr@{}}
+\toprule
+$b$ & $c(b)$ & $|M|$ & longest & $b$ & $c(b)$ & $|M|$ & longest\\
+\midrule
+2 & 1 & 2 & 2 & 24 & 1 & 306 & 100 \\
+3 & 1 & 3 & 3 & 25 & 12 & 17{,}597 & 136{,}967 \\
+4 & 1 & 3 & 2 & 26 & 5 & 5{,}662 & 8{,}773 \\
+5 & 2 & 8 & 5 & 27 & 10 & 17{,}210 & 109{,}006 \\
+6 & 1 & 7 & 5 & 28 & 5 & 5{,}782 & 4{,}242 \\
+7 & 3 & 9 & 5 & 29 & 19 & 57{,}252 & 9{,}519$^{*}$ \\
+8 & 1 & 15 & 9 & 30 & 1 & 220 & 1{,}024 \\
+9 & 3 & 12 & 4 & 31 & 20 & 79{,}182 & 9{,}896$^{*}$ \\
+10 & 2 & 26 & 8 & 32 & 6 & 45{,}205 & 9{,}750$^{*}$ \\
+11 & 6 & 152 & 45 & 33 & 11 & 57{,}676 & 9{,}961$^{*}$ \\
+12 & 1 & 17 & 8 & 34 & 7 & 56{,}457 & 9{,}377$^{*}$ \\
+13 & 7 & 228 & 32{,}021 & 35 & 15 & 182{,}378 & 9{,}599$^{*}$ \\
+14 & 2 & 240 & 86 & 36 & 3 & 6{,}295 & 3{,}935 \\
+15 & 4 & 100 & 107 & 37 & 25 & 314{,}986 & 9{,}748$^{*}$ \\
+16 & 3 & 483 & 3{,}545 & 38 & 8 & 106{,}838 & 9{,}829$^{*}$ \\
+17 & 10 & 1{,}279 & 111{,}334 & 39 & 14 & 230{,}317 & 9{,}440$^{*}$ \\
+18 & 1 & 50 & 33 & 40 & 6 & 37{,}772 & 8{,}262$^{*}$ \\
+19 & 11 & 3{,}462 & 110{,}986 & 41 & 28 & 689{,}061 & 9{,}691$^{*}$ \\
+20 & 2 & 651 & 449 & 42 & 2 & 4{,}551 & 487 \\
+21 & 6 & 2{,}600 & 479{,}150 & 50 & 7 & 189{,}914 & 9{,}925$^{*}$ \\
+22 & 4 & 1{,}242 & 764 & 60 & 2 & 16{,}146 & 1{,}938 \\
+23 & 14 & 6{,}021 & 800{,}874 & & & & \\
+\bottomrule
+\end{tabular}
+\caption{Size $|M|$ and length of the longest element (in base-$b$ digits) of the published minimal sets in \code{data-minimal-sets}, and of the set for base 60 computed in \code{data-computed}. $c(b)$ is the number of possible terminal digits (\code{terminal-digits.tex}). $^{*}$In these bases the longest elements all lie just below $10{,}000$ digits, which suggests the files list the primes found up to a search limit; these sets may not be complete, so their sizes are lower bounds.}
+\label{tab:sizes}
+\end{table}
+
+Table~\ref{tab:sizes} shows how irregular the sizes are. Base 41 has about 690{,}000 minimal primes and base 42 about 4{,}500; base 30 has 220 and base 29 at least 57{,}000. The longest elements vary even more: base 23 has one with 800{,}874 digits, while base 24's longest has 100.
+
+\paragraph{Terminal digits explain much of it.} A multi-digit minimal prime ends in $1$ or in a composite unit below $b$, and there are $c(b)$ such digits. Fitting the logarithm of the size by least squares over bases 5--60 gives
+\[
+  |M|\;\approx\;0.0017\; b^{3.78}\; c(b)^{1.59},\qquad R^2=0.955,
+\]
+whereas $b$ alone gives $R^2=0.79$. The bases with small $c(b)$, such as 12, 18, 24, 30, 42 and 60, all have much smaller sets than their neighbours. This is an empirical observation from 41 data points, some of them lower bounds, not a theorem; but it is consistent with the mechanism. With few possible last digits, every multi-digit minimal prime must end in one of them, and the kernel's one-digit primes rule out most of the rest.
+
+\paragraph{No bound is known.} Nothing in the theory bounds $|M|$ or the longest element in terms of $b$. The longest element comes from a single simple family whose first prime happens to be far out (Section~\ref{sec:heuristic}), so it is not a smooth function of $b$.
+
+\section{Where the procedure spends its time}
+
+\paragraph{Setting up.} \code{minimal} first tests all words of up to three digits, about $b^3$ of them, each with a primality test and a subword check. That is $216{,}000$ words for $b=60$. It then forms the $b(b-1)$ families $x\{R\}^*y$, with $|R|\le b$.
+
+\paragraph{Divisibility tests.} As in the C code, the gcd loops of \code{hasdivisor} enumerate $O(|R|^3)$ and, for two repeating nodes, $O(|R|^4)$ instances per family. When the repeat sets stay large, as in class runs, this dominated everything: base 60 with a class did not finish setting up in over an hour. Since every such gcd is only compared with $1$ and a gcd of $1$ stays $1$, the loops now stop as soon as the gcd reaches $1$, which usually happens after a few instances. The output is unchanged, and base 60, $2 \bmod 3$ now finishes in under a second.
+
+\paragraph{The main loop.} Each exploration can replace a family by up to $|R|+1$ longer ones, and nothing bounds the number of rounds or of families. Each family costs subword checks against a kernel of up to tens of thousands of words, plus the divisibility tests. Observed behaviour:
+
+\begin{center}\small
+\begin{tabular}{@{}llrl@{}}
+\toprule
+Run & time & peak families & outcome\\
+\midrule
+base 20, all primes & seconds & --- & complete, 651 primes\\
+base 60, all primes & 35 min & about 78{,}000 & complete, 16{,}146\\
+base 60, $1 \bmod 2$ & 33 min & --- & complete, 17{,}995\\
+base 60, $1 \bmod 3$ & 80 min & about 214{,}000 & complete, 25{,}717\\
+base 60, $1 \bmod 4$ & 4 h & about 478{,}000 & complete, 32{,}371\\
+base 60, $1 \bmod 8$ & over 3.5 h & over 600{,}000 & first round unfinished\\
+base 14, $1 \bmod 3$ & several h & 77{,}000 at iteration 4 & growing\\
+base 20, $7 \bmod 8$ & under 30 min & --- & complete after 17 iterations\\
+\bottomrule
+\end{tabular}
+\end{center}
+
+The pattern is that the first round is the most expensive. If the count then falls, the rest is quick, as for base 60, $1 \bmod 4$: about $259{,}000$, $111{,}000$, $27{,}500$, then done. If it keeps growing, as for the base-14 classes, the run may not end in any practical time. A sparser target set, as with a class, means fewer kernel words, less pruning and more families.
+
+\section{The cost of searching}
+
+\paragraph{One test.} We timed GMP's \code{mpz\_probab\_prime\_p}, as called by the program, on random composites without small factors:
+
+\begin{center}
+\begin{tabular}{@{}lrrrrrr@{}}
+\toprule
+digits $d$ & 1{,}000 & 2{,}000 & 4{,}000 & 8{,}000 & 16{,}000 & 32{,}000\\
+seconds & 0.008 & 0.05 & 0.28 & 1.6 & 8.7 & 45\\
+\bottomrule
+\end{tabular}
+\end{center}
+
+A least-squares fit gives $T(d)\approx c\,d^{2.48}$. With fast multiplication the cost of a test is $d^2$ up to logarithmic factors, and the observed exponent includes those factors at these sizes. A composite is usually rejected by the first round. A prime goes through all of them and costs about six times as much: 77\,s for the 19{,}153-digit prime $2^{19151}99$, against about 14\,s for a composite of that size.
+
+\paragraph{One family.} Testing every exponent of a family up to length $N$ costs about $\sum_{n\le N}T(n)\approx c\,N^{3.5}/3.5$. Sieving removes all exponents with a small prime factor. For a typical family, sieving to $p_{\max}$ leaves a fraction of about $e^{-\gamma}/\ln p_{\max}$ of the exponents, about $3.5\%$ for $p_{\max}=10^7$, which lowers the constant but not the exponent. LLR, which uses fast special-form arithmetic, lowers the constant further for forms like $k\cdot b^n\pm1$.
+
+\section{How far must a family be searched?}\label{sec:heuristic}
+
+There is no theorem, but the standard heuristic for prime values of such sequences gives a guide. A random number near $s(n)$ is prime with probability about $1/\ln s(n)\approx 1/(n\ln b)$. The members of a family are not random: their small-prime structure changes this by a factor $C_F$, the product over primes $p$ of the ratio between the chance that $p$ does not divide a member and the chance $1-1/p$ for a random number. Then
+\[
+  \Pr[s(n)\text{ prime}]\approx\frac{C_F}{n\ln b},\qquad
+  \mathbb{E}\,\#\{\text{primes with } n\le N\}\approx\frac{C_F}{\ln b}\,\ln N .
+\]
+The expected count grows only logarithmically. Setting it to $1$ suggests that the first prime appears around
+\[
+  N^*\approx b^{1/C_F}.
+\]
+Families with $C_F$ near $1$ give a prime quickly. Families with small $C_F$, whose members are divisible by small primes for most $n$, can need enormous lengths: for $C_F=0.1$ in base 23, $N^*$ is around $23^{10}$. This is why some bases have elements with hundreds of thousands of digits while most families resolve within a few hundred. In the limit $C_F=0$, the family is covered and contains no prime at all (\code{covering.tex}). The heuristic is only a guide: it says nothing about any particular family, and the generalized Fermat families do not fit it, since their structure is algebraic.
+
+\section{Checking an answer}
+
+Checking that a given number belongs to the set is cheap: one primality test (a proof, or a probable-prime test as in practice) and subword checks against the other elements. Checking that a claimed set is \emph{complete} has no known shortcut. The evidence for completeness is the computation itself: for every family discarded, a kernel word it contains, a divisibility argument, a covering certificate, or a prime. The checks used in \code{data-computed} (primality, the antichain property, brute-force coverage below $2\cdot10^7$, and comparison with published data) test consistency, but they are not a proof of completeness. That rests on the algorithm's cover invariant.
+
+\section{Summary}
+
+\begin{center}
+\small
+\begin{tabular}{@{}lp{8cm}@{}}
+\toprule
+Question & Status\\
+\midrule
+Is $M(\text{primes in base }b)$ computable? & Open. The procedure is a semi-algorithm.\\
+Is ``does $x\,y^*z$ contain a prime?'' decidable? & Open; decidable for coverings by a given finite set of primes.\\
+How large is $M$? & No bound known. Empirically $|M|\approx 0.0017\,b^{3.78}c(b)^{1.59}$.\\
+Cost of setup & About $b^3$ primality tests.\\
+Cost of the main loop & No bound; peaks from thousands to over $600{,}000$ families.\\
+Cost of one test, $d$ digits & About $d^{2.5}$ (measured), $d^2$ up to logarithms (theory).\\
+Cost of searching to length $N$ & About $N^{3.5}$, reduced by sieving by a constant factor.\\
+Length needed to find a prime & Heuristically about $b^{1/C_F}$.\\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\end{document}
