@@ -1,0 +1,114 @@
+\documentclass[11pt]{article}
+\usepackage[T1]{fontenc}
+\usepackage{amsmath,amssymb}
+\usepackage{fourier}
+\usepackage{booktabs}
+\usepackage{enumitem}
+\usepackage[margin=1in]{geometry}
+\usepackage[hidelinks]{hyperref}
+\usepackage{fancyvrb}
+
+\newcommand{\code}[1]{\texttt{#1}}
+\setlength{\emergencystretch}{3em}
+\fvset{fontsize=\small,xleftmargin=1.5em}
+
+\title{Installing and using LLR with \texttt{mepn-python}}
+\author{}  % add author
+\date{21 November 2026, 20:52 MST (UTC$-$07:00)}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+LLR, by Jean Penn\'e, tests numbers of the form $k\cdot b^n\pm c$ and their quotients for primality, using fast arithmetic for these special forms. For long searches it is much faster than GMP, and for forms such as $k\cdot b^n\pm1$ it proves primality instead of testing for probable primality. This report explains how to install it under Linux or WSL, how \code{search} finds and calls it, how to check that it is in use, and when it is worth having.
+\end{abstract}
+
+\section{Getting LLR}
+
+LLR is distributed as ready-made executables from Jean Penn\'e's site,
+\begin{center}
+\url{http://jpenne.free.fr/index2.html}.
+\end{center}
+For Linux, including WSL under Windows, download the 64-bit Linux build. It is usually a zip archive containing a statically linked executable named \code{sllr64}; being static, it needs no further libraries. The current version and the exact file names were not checked for this report, so use whatever the page offers for 64-bit Linux.
+
+\section{Installing it}
+
+\begin{enumerate}[label=\arabic*.]
+\item Download the zip in the Windows browser. WSL sees the Windows Downloads folder under \code{/mnt/c}:
+\begin{Verbatim}
+cd ~ && mkdir -p llr && cd llr
+cp "/mnt/c/Users/<Windows name>/Downloads/<llr zip file>" .
+unzip "<llr zip file>"           # sudo apt install unzip, if needed
+\end{Verbatim}
+
+\item Copy the executable to the place where \code{search} looks first, and make it executable. Unzipping often drops that permission.
+\begin{Verbatim}
+cp sllr64 ~/mepn-python/bin/linux-x64/sllr64
+chmod +x ~/mepn-python/bin/linux-x64/sllr64
+\end{Verbatim}
+If the executable in the archive has another name, either keep it, since \code{search} also looks for \code{llr64} and \code{llr}, or rename it to \code{sllr64}.
+
+\item Check that it runs:
+\begin{Verbatim}
+~/mepn-python/bin/linux-x64/sllr64 -v
+\end{Verbatim}
+\end{enumerate}
+
+\paragraph{Windows.} A Windows build works too, but from Windows rather than from WSL: place \code{cllr64.exe} in \code{bin/windows-x64/}, together with its DLLs. Under WSL, use the Linux build.
+
+\section{How \texttt{search} finds and uses it}
+
+\paragraph{Finding it.} Unless told otherwise, \code{search} looks for an executable named \code{sllr64}, \code{cllr64}, \code{llr64} or \code{llr}, first in \code{bin/<platform>/} of the repository, then in the current folder, then on the \code{PATH}. It can also be named directly:
+\begin{Verbatim}
+python -m bright search 300 10000 --llr /path/to/sllr64
+export BRIGHT_LLR=/path/to/sllr64          # the same, for every run
+python -m bright search 300 10000 --no-llr  # force the built-in GMP test
+\end{Verbatim}
+The first line printed by \code{search} names the test in use, for example \code{primality test: /root/mepn-python/bin/linux-x64/sllr64} or \code{primality test: built-in}. If an LLR file exists but is not executable, \code{search} says so and suggests \code{chmod +x}.
+
+\paragraph{Calling it.} For each candidate, \code{search} writes a one-line input file in LLR's ABC format and runs LLR on it with \code{-d}:
+\begin{Verbatim}
+ABC ($a*$b^$c$d)/$e
+4105 17 100000 -9 16
+\end{Verbatim}
+This line stands for $(4105\cdot17^{100000}-9)/16$, a member of the base-17 family \code{F1\{9\}}. In general, a member of a simple family $x\,y^*z$ is $(A\cdot b^{c}+C)/q$, where the exponent $c$ is the number of repeated digits plus the length of $z$ (\code{bright-algorithm.tex}, Section~11). An optional fifth argument to \code{search} is passed on to LLR as \code{-a<arg>}, as in the C version.
+
+\paragraph{Reading the result.} \code{search} treats ``not prime'' as composite, and both ``PRP'' and ``is prime'' as a prime. LLR reports the latter when it can prove primality, as it can for forms like $k\cdot b^n\pm1$. The C program recognised only ``PRP'', and would have retried a proven prime forever. If LLR's output contains neither, \code{search} stops with the message \code{LLR gave no result}, rather than guess.
+
+\paragraph{Its own files.} LLR writes files such as \code{lresults.txt} and \code{llr.ini} in the folder it is run from. They are harmless; this is one more reason to use a separate folder for each run.
+
+\section{Checking the installation}
+
+Run a small, known case and compare the result with the stored set:
+\begin{Verbatim}
+mkdir -p ~/runs/llrtest && cd ~/runs/llrtest
+~/mepn-python/run-class.sh     # base 16, class 3 mod 4,
+                               # simple to 100, search 100 to 2000
+grep "primality test" 16.3mod4/run.log
+diff <(sort 16.3mod4/data/minimal.16.3mod4.txt) \
+     <(sort ~/mepn-python/data-computed/minimal.16.3mod4.txt) && echo same
+\end{Verbatim}
+The log should name LLR, and the 359 primes should match. The last family of this class, \code{F8*F}, gives the prime $\mathrm{F}\,8^{1517}\mathrm{F}$, which LLR has to find.
+
+\section{When it is worth it}
+
+The built-in test calls GMP's \code{mpz\_probab\_prime\_p}. On random composites without small factors it took
+
+\begin{center}
+\begin{tabular}{@{}lrrrrrr@{}}
+\toprule
+digits & 1{,}000 & 2{,}000 & 4{,}000 & 8{,}000 & 16{,}000 & 32{,}000\\
+seconds & 0.008 & 0.05 & 0.28 & 1.6 & 8.7 & 45\\
+\bottomrule
+\end{tabular}
+\end{center}
+
+which grows like $d^{2.5}$ in the number of digits (\code{complexity.tex}). LLR uses arithmetic specialised to numbers of this form, and its advantage grows with size. LLR was not available where these measurements were made, so no comparison is given here.
+\begin{itemize}
+\item For searches up to a few thousand digits, the GMP test is adequate, and most of the class sets in \code{data-computed} were completed with it.
+\item For the open families searched to $20{,}000$ digits and beyond, such as base 10, $1 \bmod 3$ (\code{8*9}) or base 12, $1 \bmod 8$ (\code{10*1}), and for the unsolved families of bases 17--29, LLR is the right tool.
+\item For forms $k\cdot b^n\pm1$, LLR also turns a probable prime into a proven one.
+\end{itemize}
+Its output is the same either way: a family's first prime, which is then added to the kernel.
+
+\end{document}
