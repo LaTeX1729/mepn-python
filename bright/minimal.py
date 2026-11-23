@@ -242,14 +242,13 @@ class BrightMinimal:
         a, mod = self.residue, self.modulus
         return not any(x % mod == a and gcd(x, 30) == 1 for x in reach)
 
-    # -- kernel -------------------------------------------------------------
-    # The subword test dominates the running time, so the kernel is compiled
-    # into regular expressions that run in C. q = "a1a2...ak" becomes
-    # "[^a1]*a1[^a2]*a2...[^ak]*ak", which matches at the start of p exactly
-    # when q is a subsequence of p (with no backtracking). The kernel only
-    # grows, so it is compiled in frozen blocks of _CHUNK primes plus a small
-    # tail that is recompiled when new primes arrive.
-    _CHUNK = 64
+    # -- subword index -----------------------------------------------------
+    # A kernel prime q of length >= 2 can only be a subsequence of p if p has
+    # q[0] somewhere before an occurrence of q[-1].  Kernel primes are grouped
+    # by that (first, last) pair, and each group is one compiled regex.  For a
+    # string p only the groups whose pair occurs in p are tried, which is a
+    # small fraction of the kernel once it holds thousands of primes.
+    # Single-digit kernel primes are kept in a set.
 
     @staticmethod
     def _compile(primes):
@@ -260,31 +259,75 @@ class BrightMinimal:
         K = self.K
         if getattr(self, "_indexed_list", None) is not K:
             self._indexed_list = K
-            self._frozen = []
-            self._frozen_len = 0
-            self._tail = None
-            self._tail_len = 0
+            self._indexed_len = 0
+            self._singles = set()
+            self._groups = {}      # (first, last) -> list of primes
+            self._matchers = {}    # (first, last) -> compiled match, or None if stale
+            self._seen = {}        # p -> -1 (has a kernel subword) or kernel length checked
         n = len(K)
-        while n - self._frozen_len >= self._CHUNK:
-            self._frozen.append(self._compile(K[self._frozen_len:self._frozen_len + self._CHUNK]))
-            self._frozen_len += self._CHUNK
-            self._tail = None
-            self._tail_len = 0
-        if n > self._frozen_len and self._tail_len != n:
-            self._tail = self._compile(K[self._frozen_len:n])
-            self._tail_len = n
-        elif n == self._frozen_len:
-            self._tail = None
-            self._tail_len = n
+        if n == self._indexed_len:
+            return
+        groups, matchers = self._groups, self._matchers
+        for q in K[self._indexed_len:n]:
+            if len(q) == 1:
+                self._singles.add(q)
+            else:
+                key = (q[0], q[-1])
+                groups.setdefault(key, []).append(q)
+                matchers[key] = None
+        self._indexed_len = n
+
+    # Strings repeat a lot (about two calls in three), and the kernel only
+    # grows, so results are cached: a string with a kernel subword keeps one,
+    # and a string without one only needs the primes added since.  The cache
+    # is cleared when it reaches _SEEN_MAX entries, to bound memory.
+    _SEEN_MAX = 2_000_000
 
     def nosubword(self, p):
         """True if no kernel prime is a subsequence of p."""
         self._sync_index()
-        for match in self._frozen:
-            if match(p):
+        n = self._indexed_len
+        seen = self._seen
+        c = seen.get(p)
+        if c is not None:
+            if c < 0:
                 return False
-        if self._tail is not None and self._tail(p):
+            if c == n:
+                return True
+            if n - c <= 32:
+                for q in self.K[c:n]:
+                    if is_subsequence(q, p):
+                        seen[p] = -1
+                        return False
+                seen[p] = n
+                return True
+        ok = self._nosubword_index(p)
+        if len(seen) >= self._SEEN_MAX:
+            seen.clear()
+        seen[p] = n if ok else -1
+        return ok
+
+    def _nosubword_index(self, p):
+        first = {}
+        last = {}
+        for i, c in enumerate(p):
+            if c not in first:
+                first[c] = i
+            last[c] = i
+        singles = self._singles
+        if singles and not singles.isdisjoint(first):
             return False
+        groups, matchers = self._groups, self._matchers
+        for a, i in first.items():
+            for b, j in last.items():
+                if i < j:
+                    key = (a, b)
+                    if key in groups:
+                        m = matchers[key]
+                        if m is None:
+                            m = matchers[key] = self._compile(groups[key])
+                        if m(p):
+                            return False
         return True
 
     def nosubwordskip(self, p, skip):
