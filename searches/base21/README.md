@@ -17,7 +17,7 @@ and a prime in it would complete the minimal set for base 21. The family has no 
 | `unsolved.21.txt` | the family, for `search` |
 | `progress.txt` | one line per sieving session: sieve limit and number of candidates |
 
-The sieve limit is the `pmin=` value in `sieve.21.txt`. Every exponent removed has a prime factor below that limit. Sieving is done with srsieve in check-ins and the files here are updated after each one.
+The sieve limit is the `pmin=` value in `sieve.21.txt`. Every exponent removed has a prime factor below that limit. Sieving was done with srsieve over 12 check-ins and **finished on 2026-11-22 at a limit of 1.0006·10^12, leaving 14,960 candidates** (from 20,522 after the first trial sieve). At that depth each further check-in removed fewer than 50 candidates, far fewer than the time it would save in testing.
 
 **Testing with LLR directly** (fastest; run in a folder of its own):
 
