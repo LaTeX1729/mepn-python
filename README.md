@@ -111,6 +111,15 @@ mkdir -p ~/runs && cd ~/runs
 tail -f ~/runs/60.1mod8/run.log      # if started in the background
 ```
 
+**All classes at once.** Answer `all` for the residue (it is the default) to run every class a mod m with gcd(a, m) = 1. Each class runs in its own subfolder (`60.1mod8`, `60.3mod8`, …) with its own `run.log`, and the script asks how many classes to run at the same time; the default is one per processor core, up to the number of classes. Each class needs its own memory, so lower that number for large bases if memory is short. Classes with a saved iteration resume from it if you answer `y`. Progress of the whole set, and a summary at the end, go to `run-all.log` in the parent folder:
+
+```sh
+cd ~/runs && ~/mepn-python/run-class.sh     # base 60, modulus 8, residue all
+tail -f ~/runs/60.mod8/run-all.log
+```
+
+A background run starts in its own process group, and the script prints the command that stops it together with every step it started (`kill -- -PID`).
+
 **Suggestions for long runs**
 
 * **Use one folder per base and class.** Every command works on all the files in `data/`, so separate folders keep long runs from interfering with each other, and each folder has its own `iter/` files.
